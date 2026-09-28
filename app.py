@@ -15,6 +15,9 @@
 import json
 import os
 import re
+import signal
+import threading
+import time
 import uuid
 from typing import Optional
 
@@ -32,6 +35,41 @@ DEEPSEEK_URL = "https://api.deepseek.com/chat/completions"
 DEEPSEEK_MODEL = "deepseek-chat"
 
 LOCAL_DIR = os.path.dirname(os.path.abspath(__file__))
+
+
+# ---------- 孤儿进程守护（桌面 App 场景） ----------
+# 原生壳通过 env 传入父进程 pid；壳被强杀后子进程自行退出，避免残留占内存。
+# 注意：必须先发信号再写日志，且日志写文件不写 stderr（管道可能已断裂）。
+def _parent_guard() -> None:
+    expected = int(os.environ.get("STEPBUDDY_PARENT_PID") or 0)
+    if expected <= 0:
+        return
+    logf = os.environ.get("STEPBUDDY_LOG", "/tmp/stepmate-guard.log")
+
+    def note(msg: str) -> None:
+        try:
+            with open(logf, "a", encoding="utf-8") as f:
+                f.write(f"[{time.strftime('%H:%M:%S')}] {msg}\n")
+        except Exception:
+            pass
+
+    def run() -> None:
+        while True:
+            time.sleep(1.0)
+            if os.getppid() != expected:  # 父进程死后被 launchd 收养 -> ppid 变 1
+                try:
+                    os.kill(os.getpid(), signal.SIGTERM)
+                except Exception:
+                    pass
+                note("父进程已退出，后端自行关闭")
+                time.sleep(3)
+                os._exit(0)
+
+    threading.Thread(target=run, daemon=True).start()
+    note(f"守护启动，父 pid={expected}")
+
+
+_parent_guard()
 
 
 # ---------- LLM 调用封装 ----------
@@ -123,6 +161,12 @@ def parse_steps(text: str) -> dict:
 
 
 # ---------- 路由 ----------
+@app.get("/healthz")
+async def healthz():
+    """桌面壳用：探测本服务是否可用（响应体含 stepmate 以校验身份）。"""
+    return {"ok": True, "app": "stepmate"}
+
+
 @app.post("/api/decompose")
 async def decompose(req: Request):
     body = await req.json()
