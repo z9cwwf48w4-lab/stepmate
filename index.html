@@ -6,23 +6,12 @@
 <title>步步伴 StepMate · 目标分解 + AI 执行搭档</title>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/lxgw-wenkai-lite-webfont@1.6.0/style.css" />
 <style>
-  /* ===== 设计令牌：字阶 / 圆角三档 / 间距 4 网格 / 暖纸色板 ===== */
   :root{
-    --paper:#f7f2e7;        /* 页面底：温暖奶油纸 */
-    --surface:#fffdf7;      /* 卡片 */
-    --surface-2:#f1ead9;    /* 控件底 / hover */
-    --surface-3:#e9e0cb;    /* active */
-    --line:#e3d9c2;         /* 边线 */
-    --line-strong:#d5c8ab;
-    --ink:#3c352a;          /* 主文字：暖深棕 */
-    --sub:#8a7f6a;          /* 次级 */
-    --accent:#d96f2b;       /* 主行动：暖橙 */
-    --accent-deep:#bf5a1d;
-    --accent-soft:#f8e8d8;
-    --green:#4f9e63;        /* 完成 */
-    --green-soft:#e3f0e4;
-    --red:#c2543f;
-
+    --paper:#f7f2e7; --surface:#fffdf7; --surface-2:#f1ead9; --surface-3:#e9e0cb;
+    --line:#e3d9c2; --line-strong:#d5c8ab;
+    --ink:#3c352a; --sub:#8a7f6a;
+    --accent:#d96f2b; --accent-deep:#bf5a1d; --accent-soft:#f8e8d8;
+    --green:#4f9e63; --green-soft:#e3f0e4; --red:#c2543f;
     --f-display:24px; --f-h:16px; --f-body:14px; --f-sm:12.5px; --f-xs:11px;
     --r-1:6px; --r-2:10px; --r-3:16px; --r-full:999px;
     --s-1:4px; --s-2:8px; --s-3:12px; --s-4:16px; --s-5:20px; --s-6:24px; --s-8:32px;
@@ -37,51 +26,42 @@
   body{margin:0;font-family:var(--body);font-size:var(--f-body);color:var(--ink);
     background:var(--paper);line-height:1.6;
     background-image:radial-gradient(rgba(148,124,80,.055) 1px, transparent 1px);
-    background-size:22px 22px;}
+    background-size:22px 22px}
   .wrap{max-width:760px;margin:0 auto;padding:var(--s-8) var(--s-5) 96px}
-
-  /* ===== 头部 ===== */
   header{display:flex;align-items:center;gap:var(--s-3);margin-bottom:var(--s-1)}
   .logo{width:40px;height:40px;border-radius:var(--r-2);background:var(--green);
-    display:flex;align-items:center;justify-content:center;color:#fff;flex:none;
-    box-shadow:var(--shadow)}
-  h1{font-family:var(--hand);font-size:var(--f-display);font-weight:700;margin:0;letter-spacing:.5px}
+    display:flex;align-items:center;justify-content:center;color:#fff;flex:none;box-shadow:var(--shadow)}
+  h1{font-family:var(--hand);font-size:var(--f-display);margin:0;letter-spacing:.5px}
   .tag{font-size:var(--f-sm);color:var(--sub);margin:0 0 var(--s-6);max-width:62ch}
   .tag b{color:var(--accent-deep);font-weight:600}
-
-  /* ===== 卡片 ===== */
   .card{background:var(--surface);border:1px solid var(--line);border-radius:var(--r-3);
     padding:var(--s-5);box-shadow:var(--shadow)}
-
-  /* 目标输入区 */
   .goalbox{position:relative}
-  .goalbox svg{position:absolute;top:var(--s-4);left:var(--s-4);color:var(--sub)}
+  .goalbox>svg{position:absolute;top:var(--s-4);left:var(--s-4);color:var(--sub)}
   #goal{width:100%;min-height:76px;resize:vertical;border:1px solid var(--line);border-radius:var(--r-2);
-    background:var(--surface-2);padding:var(--s-4) var(--s-4) var(--s-4) 44px;
+    background:var(--surface-2);padding:var(--s-4) 56px var(--s-4) 44px;
     font-family:var(--hand);font-size:var(--f-h);color:var(--ink);outline:none;transition:border-color var(--dur)}
   #goal:focus{border-color:var(--accent);background:#fff}
   #goal::placeholder{color:#b3a88f}
-
   .chips{display:flex;gap:var(--s-2);flex-wrap:wrap;margin-top:var(--s-3)}
   .chip{border:1px dashed var(--line-strong);border-radius:var(--r-full);background:transparent;
-    color:var(--sub);font-size:var(--f-sm);padding:6px 14px;cursor:pointer;
-    transition:all var(--dur) var(--ease)}
+    color:var(--sub);font-size:var(--f-sm);padding:6px 14px;cursor:pointer;transition:all var(--dur) var(--ease)}
   .chip:hover{border-color:var(--accent);color:var(--accent-deep);background:var(--accent-soft)}
-  .chip:active{background:var(--accent-soft);transform:scale(.97)}
-  .chips-label{font-size:var(--f-xs);color:var(--sub);margin-top:var(--s-3)}
-
-  .settings{display:flex;gap:var(--s-3);flex-wrap:wrap;align-items:center;
-    margin-top:var(--s-4);font-size:var(--f-sm);color:var(--sub)}
-  .seg{display:inline-flex;border:1px solid var(--line);border-radius:var(--r-2);overflow:hidden;background:var(--surface-2)}
-  .seg button{border-radius:0;background:transparent;color:var(--sub);padding:8px 14px;border:none;
-    font-size:var(--f-sm);cursor:pointer;transition:all var(--dur) var(--ease)}
-  .seg button:hover{color:var(--ink)}
-  .seg button.on{background:var(--accent);color:#fff}
-  .seg button:active{filter:brightness(.92)}
-  #keybox input{width:200px;background:var(--surface-2);border:1px solid var(--line);color:var(--ink);
-    border-radius:var(--r-2);padding:8px 12px;font-size:var(--f-sm);outline:none}
-  #keybox input:focus{border-color:var(--accent)}
-
+  .chip:active{transform:scale(.97)}
+  /* ===== 设置区 ===== */
+  .settings{display:flex;gap:var(--s-3);flex-wrap:wrap;align-items:center;margin-top:var(--s-4);
+    font-size:var(--f-sm);color:var(--sub)}
+  select,.tin{background:var(--surface-2);border:1px solid var(--line);color:var(--ink);
+    border-radius:var(--r-2);padding:8px 12px;font-size:var(--f-sm);outline:none;font-family:var(--body)}
+  select:focus,.tin:focus{border-color:var(--accent)}
+  .tin{width:150px}
+  #pbase{width:230px}
+  .settings .lbl{font-size:var(--f-xs)}
+  /* 粒度滑杆 */
+  .level-row{display:flex;align-items:center;gap:var(--s-3);margin-top:var(--s-4)}
+  .level-row .lbl{font-size:var(--f-sm);color:var(--sub);flex:none}
+  input[type=range]{flex:1;accent-color:var(--accent);height:4px}
+  #levelName{font-family:var(--hand);color:var(--accent-deep);font-size:var(--f-h);min-width:64px;text-align:right}
   .go-row{display:flex;align-items:center;gap:var(--s-4);margin-top:var(--s-5)}
   .btn-go{display:inline-flex;align-items:center;gap:var(--s-2);height:44px;padding:0 var(--s-6);
     background:var(--accent);color:#fff;border:none;border-radius:var(--r-full);
@@ -91,49 +71,61 @@
   .btn-go:active{transform:scale(.97);box-shadow:none}
   .btn-go:disabled{opacity:.55;cursor:not-allowed}
   .meta{font-size:var(--f-sm);color:var(--sub)}
-  .err{color:var(--red);font-size:var(--f-sm);margin-top:var(--s-2)}
-
-  /* ===== 进度条 ===== */
+  .err{color:var(--red);font-size:var(--f-sm);margin-top:var(--s-2);white-space:pre-wrap}
+  .restore-tip{display:flex;justify-content:space-between;align-items:center;gap:var(--s-3);
+    background:var(--green-soft);border:1px solid var(--line);border-radius:var(--r-2);
+    padding:var(--s-2) var(--s-3);font-size:var(--f-sm);color:var(--ink);margin-top:var(--s-4)}
+  .restore-tip button{background:none;border:none;color:var(--green);cursor:pointer;font-size:var(--f-xs);text-decoration:underline}
+  /* ===== 进度/工具行 ===== */
   .progress{display:flex;align-items:center;gap:var(--s-3);margin:var(--s-5) 0 var(--s-4)}
   .progress .bar{flex:1;height:8px;border-radius:var(--r-full);background:var(--surface-2);overflow:hidden}
-  .progress .fill{height:100%;border-radius:var(--r-full);background:var(--green);width:0;
-    transition:width .4s var(--ease)}
+  .progress .fill{height:100%;border-radius:var(--r-full);background:var(--green);width:0;transition:width .4s var(--ease)}
   .progress .num{font-size:var(--f-xs);color:var(--sub);flex:none}
-
+  .mini-btn{height:30px;padding:0 var(--s-3);border-radius:var(--r-full);border:1px solid var(--line);
+    background:var(--surface);color:var(--sub);font-size:var(--f-xs);cursor:pointer;flex:none;
+    display:inline-flex;align-items:center;gap:var(--s-1);transition:all var(--dur) var(--ease)}
+  .mini-btn:hover{color:var(--accent-deep);border-color:var(--accent);background:var(--accent-soft)}
+  .mini-btn:active{background:var(--surface-3)}
   /* ===== 步骤树 ===== */
   .step{background:var(--surface);border:1px solid var(--line);border-radius:var(--r-3);
     padding:var(--s-4);margin-bottom:var(--s-3);box-shadow:var(--shadow);
     transition:box-shadow var(--dur) var(--ease), border-color var(--dur) var(--ease)}
   .step:hover{border-color:var(--line-strong);box-shadow:var(--shadow-pop)}
-  .step-head{display:flex;align-items:flex-start;gap:var(--s-3);cursor:pointer}
+  .step-head{display:flex;align-items:flex-start;gap:var(--s-3)}
   .n-badge{width:28px;height:28px;border-radius:var(--r-full);background:var(--accent-soft);
     color:var(--accent-deep);font-family:var(--hand);font-weight:700;font-size:var(--f-sm);
-    display:flex;align-items:center;justify-content:center;flex:none;margin-top:2px;transition:all var(--dur)}
+    display:flex;align-items:center;justify-content:center;flex:none;margin-top:2px;
+    cursor:pointer;transition:all var(--dur) var(--ease);border:1px solid transparent}
+  .n-badge:hover{border-color:var(--green)}
   .done .n-badge{background:var(--green-soft);color:var(--green)}
   .step-title{flex:1;min-width:0}
   .step-title .t{font-family:var(--hand);font-size:var(--f-h);font-weight:700;line-height:1.4}
   .done .step-title .t{text-decoration:line-through;color:var(--sub)}
   .step-title .d{color:var(--sub);font-size:var(--f-sm);margin-top:2px}
-  .acts{display:flex;gap:var(--s-2);flex:none;margin-top:2px}
-  .icon-btn{width:32px;height:32px;border-radius:var(--r-2);border:1px solid var(--line);
+  .step-title input{width:100%;font-family:var(--hand);font-size:var(--f-h);font-weight:700;
+    background:var(--surface-2);border:1px solid var(--accent);border-radius:var(--r-1);
+    color:var(--ink);padding:4px 8px;outline:none}
+  .acts{display:flex;gap:var(--s-1);flex:none;margin-top:2px;flex-wrap:wrap;justify-content:flex-end;max-width:220px}
+  .icon-btn{width:30px;height:30px;border-radius:var(--r-2);border:1px solid var(--line);
     background:var(--surface);color:var(--sub);display:flex;align-items:center;justify-content:center;
-    cursor:pointer;transition:all var(--dur) var(--ease)}
+    cursor:pointer;transition:all var(--dur) var(--ease);padding:0}
   .icon-btn:hover{color:var(--ink);background:var(--surface-2)}
   .icon-btn:active{background:var(--surface-3)}
-  .icon-btn.done-btn:hover{color:var(--green);border-color:var(--green)}
-  .done .done-btn{color:var(--green);border-color:var(--green);background:var(--green-soft)}
   .icon-btn.chat-btn:hover{color:var(--accent-deep);border-color:var(--accent)}
-  .caret{transition:transform var(--dur) var(--ease);color:var(--sub)}
-  .open-caret{transform:rotate(90deg)}
+  .icon-btn.wand-btn:hover{color:var(--accent-deep);border-color:var(--accent)}
+  .icon-btn.edit-btn:hover{color:var(--accent-deep);border-color:var(--accent)}
+  .icon-btn.del-btn:hover{color:var(--red);border-color:var(--red)}
+  .icon-btn:disabled{opacity:.4;cursor:not-allowed}
   .subwrap{margin:var(--s-3) 0 0 40px;display:flex;flex-direction:column;gap:var(--s-1)}
   .sub{display:flex;align-items:flex-start;gap:var(--s-2);padding:var(--s-2) var(--s-3);
     border-radius:var(--r-2);cursor:pointer;transition:background var(--dur)}
   .sub:hover{background:var(--surface-2)}
-  .sub:active{background:var(--surface-3)}
   .sub .dot{width:6px;height:6px;border-radius:var(--r-full);background:var(--line-strong);flex:none;margin-top:8px}
   .sub .st{font-size:var(--f-sm)}
   .sub .sd{font-size:var(--f-xs);color:var(--sub)}
-
+  .add-step{width:100%;border:1px dashed var(--line-strong);background:transparent;color:var(--sub);
+    border-radius:var(--r-2);padding:var(--s-3);font-size:var(--f-sm);cursor:pointer;transition:all var(--dur)}
+  .add-step:hover{color:var(--accent-deep);border-color:var(--accent);background:var(--accent-soft)}
   /* ===== 聊天抽屉 ===== */
   .drawer{position:fixed;top:0;right:0;height:100%;width:440px;max-width:94vw;background:var(--paper);
     border-left:1px solid var(--line);transform:translateX(105%);transition:transform .28s var(--ease);
@@ -143,65 +135,54 @@
     display:flex;justify-content:space-between;align-items:center;gap:var(--s-3)}
   .dh b{font-family:var(--hand);font-size:var(--f-h);line-height:1.35}
   .x-btn{height:32px;padding:0 var(--s-3);border-radius:var(--r-2);border:1px solid var(--line);
-    background:var(--surface);color:var(--sub);font-size:var(--f-xs);cursor:pointer;flex:none;
-    transition:all var(--dur)}
+    background:var(--surface);color:var(--sub);font-size:var(--f-xs);cursor:pointer;flex:none;transition:all var(--dur)}
   .x-btn:hover{color:var(--ink);background:var(--surface-2)}
-  .x-btn:active{background:var(--surface-3)}
   .msgs{flex:1;overflow:auto;padding:var(--s-4);display:flex;flex-direction:column;gap:var(--s-3)}
   .m{max-width:88%;padding:var(--s-3) var(--s-4);border-radius:var(--r-3);font-size:var(--f-sm);
-    white-space:pre-wrap;word-break:break-word;box-shadow:var(--shadow)}
-  .m.u{align-self:flex-end;background:var(--accent);color:#fff;border-bottom-right-radius:4px}
+    word-break:break-word;box-shadow:var(--shadow)}
+  .m.u{align-self:flex-end;background:var(--accent);color:#fff;border-bottom-right-radius:4px;white-space:pre-wrap}
   .m.a{align-self:flex-start;background:var(--surface);border:1px solid var(--line);border-bottom-left-radius:4px}
+  .m.a.streaming{color:var(--sub)}
+  .m h3,.m h4{margin:var(--s-2) 0 var(--s-1);font-family:var(--hand)}
+  .m p{margin:var(--s-1) 0}
+  .m ul,.m ol{margin:var(--s-1) 0;padding-left:var(--s-5)}
+  .m a{color:var(--accent-deep)}
   .m pre{background:#373021;color:#f5efe2;border-radius:var(--r-2);padding:var(--s-3);
-    overflow:auto;font-size:var(--f-sm);position:relative;margin:var(--s-2) 0 0}
-  .m code{font-family:ui-monospace,Menlo,monospace}
+    overflow:auto;font-size:var(--f-sm);position:relative;margin:var(--s-2) 0}
+  .m code{font-family:ui-monospace,Menlo,monospace;background:rgba(0,0,0,.06);padding:1px 4px;border-radius:var(--r-1)}
+  .m pre code{background:none;padding:0}
   .copy{position:absolute;top:6px;right:6px;border:none;border-radius:var(--r-1);
     background:rgba(255,255,255,.14);color:#f5efe2;font-size:var(--f-xs);padding:4px 10px;cursor:pointer}
   .copy:hover{background:rgba(255,255,255,.25)}
-  .copy:active{background:rgba(255,255,255,.35)}
-  .inputbar{display:flex;gap:var(--s-2);padding:var(--s-3) var(--s-4);border-top:1px solid var(--line);
-    background:var(--surface)}
+  .inputbar{display:flex;gap:var(--s-2);padding:var(--s-3) var(--s-4);border-top:1px solid var(--line);background:var(--surface)}
   .inputbar textarea{flex:1;min-height:44px;max-height:110px;resize:none;background:var(--surface-2);
     border:1px solid var(--line);border-radius:var(--r-2);padding:var(--s-3);color:var(--ink);
     font-size:var(--f-sm);font-family:var(--body);outline:none}
   .inputbar textarea:focus{border-color:var(--accent);background:#fff}
-  .send-btn{width:44px;height:44px;border-radius:var(--r-2);background:var(--accent);color:#fff;
-    border:none;display:flex;align-items:center;justify-content:center;cursor:pointer;flex:none;
-    transition:all var(--dur) var(--ease)}
+  .mic-btn,.send-btn{width:44px;height:44px;border-radius:var(--r-2);color:#fff;border:none;
+    display:flex;align-items:center;justify-content:center;cursor:pointer;flex:none;transition:all var(--dur) var(--ease)}
+  .mic-btn{background:var(--surface);border:1px solid var(--line);color:var(--sub)}
+  .mic-btn:hover{color:var(--accent-deep);border-color:var(--accent);background:var(--accent-soft)}
+  .mic-btn.rec{color:#fff;background:var(--red);border-color:var(--red);animation:pulse 1.2s ease infinite}
+  @keyframes pulse{50%{box-shadow:0 0 0 6px rgba(194,84,63,.16)}}
+  .send-btn{background:var(--accent)}
   .send-btn:hover{background:var(--accent-deep)}
   .send-btn:active{transform:scale(.94)}
-
-  .spin{display:inline-block;width:14px;height:14px;border:2px solid var(--line-strong);
-    border-top-color:var(--accent);border-radius:var(--r-full);animation:sp .7s linear infinite;
-    vertical-align:-2px}
-  @keyframes sp{to{transform:rotate(360deg)}}
-  footer{text-align:center;margin-top:var(--s-8);color:var(--sub);font-size:var(--f-xs)}
-
-  /* ===== 语音 / 导出 ===== */
   .mic-float{position:absolute;top:var(--s-2);right:var(--s-2);width:34px;height:34px;
     border-radius:var(--r-2);border:1px solid var(--line);background:var(--surface);
-    color:var(--sub);display:flex;align-items:center;justify-content:center;cursor:pointer;
-    transition:all var(--dur) var(--ease)}
+    color:var(--sub);display:flex;align-items:center;justify-content:center;cursor:pointer;transition:all var(--dur) var(--ease)}
   .mic-float:hover{color:var(--accent-deep);border-color:var(--accent);background:var(--accent-soft)}
-  .mic-float:active{background:var(--surface-3);transform:scale(.94)}
-  .mic-btn{width:44px;height:44px;border-radius:var(--r-2);border:1px solid var(--line);
-    background:var(--surface);color:var(--sub);display:flex;align-items:center;justify-content:center;
-    cursor:pointer;flex:none;transition:all var(--dur) var(--ease)}
-  .mic-btn:hover{color:var(--accent-deep);border-color:var(--accent);background:var(--accent-soft)}
-  .mic-btn:active{transform:scale(.94)}
-  .mic-float.rec,.mic-btn.rec{color:#fff;background:var(--red);border-color:var(--red);
-    animation:pulse 1.2s ease infinite}
-  @keyframes pulse{50%{box-shadow:0 0 0 6px rgba(194,84,63,.16)}}
-  .mini-btn{height:30px;padding:0 var(--s-3);border-radius:var(--r-full);border:1px solid var(--line);
-    background:var(--surface);color:var(--sub);font-size:var(--f-xs);cursor:pointer;flex:none;
-    display:inline-flex;align-items:center;gap:var(--s-1);transition:all var(--dur) var(--ease)}
-  .mini-btn:hover{color:var(--accent-deep);border-color:var(--accent);background:var(--accent-soft)}
-  .mini-btn:active{background:var(--surface-3)}
+  .mic-float:active{transform:scale(.94)}
+  .mic-float.rec{color:#fff;background:var(--red);border-color:var(--red);animation:pulse 1.2s ease infinite}
+  .spin{display:inline-block;width:14px;height:14px;border:2px solid var(--line-strong);
+    border-top-color:var(--accent);border-radius:var(--r-full);animation:sp .7s linear infinite;vertical-align:-2px}
+  @keyframes sp{to{transform:rotate(360deg)}}
   .toast{position:fixed;bottom:var(--s-6);left:50%;transform:translateX(-50%);
     background:var(--ink);color:var(--paper);padding:var(--s-2) var(--s-4);
     border-radius:var(--r-full);font-size:var(--f-sm);opacity:0;transition:opacity .25s;
-    pointer-events:none;z-index:99;max-width:80vw}
+    pointer-events:none;z-index:99;max-width:80vw;white-space:pre-wrap}
   .toast.show{opacity:.94}
+  footer{text-align:center;margin-top:var(--s-8);color:var(--sub);font-size:var(--f-xs)}
 </style>
 </head>
 <body>
@@ -212,7 +193,7 @@
     </div>
     <h1>步步伴 StepMate</h1>
   </header>
-  <p class="tag">把大目标拆成一步步，<b>每一步都有 AI 执行搭档陪你真的做出来</b>——不是只给建议。（灵感来自 Goblin Tools）</p>
+  <p class="tag">把大目标拆成一步步，<b>每一步都有 AI 执行搭档陪你真的做出来</b>——不是只给建议。AI 接口随便换：Ollama / DeepSeek / 通义 / 智谱 / 任意 OpenAI 兼容接口。</p>
 
   <div class="card">
     <div class="goalbox">
@@ -222,16 +203,22 @@
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.05" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" x2="12" y1="19" y2="22"/></svg>
       </button>
     </div>
-    <div class="chips-label">试试这些：</div>
     <div class="chips" id="chips"></div>
+
     <div class="settings">
-      <span>AI 后端</span>
-      <div class="seg" id="backend">
-        <button data-b="local" class="on">本地 Ollama（免费）</button>
-        <button data-b="deepseek">DeepSeek API</button>
-      </div>
-      <label id="keybox" hidden>Key <input type="password" id="apikey" placeholder="sk-..." /></label>
+      <span class="lbl">AI 接口</span>
+      <select id="preset"></select>
+      <input class="tin" id="pmodel" placeholder="模型名" title="模型名" />
+      <input class="tin" id="pkey" type="password" placeholder="API Key（本地免填）" />
+      <input class="tin" id="pbase" placeholder="接口地址 https://..." hidden />
     </div>
+
+    <div class="level-row">
+      <span class="lbl">拆解粒度</span>
+      <input type="range" id="level" min="1" max="5" value="3" />
+      <span id="levelName">适中</span>
+    </div>
+
     <div class="go-row">
       <button class="btn-go" id="go">
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M15 4V2"/><path d="M15 16v-2"/><path d="M8 9h2"/><path d="M20 9h2"/><path d="M17.8 11.8 19 13"/><path d="M15 9h0"/><path d="M17.8 6.2 19 5"/><path d="m3 21 9-9"/><path d="M12.2 6.2 11 5"/></svg>
@@ -240,6 +227,10 @@
       <span id="status" class="meta"></span>
     </div>
     <div id="err" class="err"></div>
+    <div class="restore-tip" id="restoreTip" hidden>
+      <span id="restoreText"></span>
+      <button id="discardBtn">丢弃，重新开始</button>
+    </div>
   </div>
 
   <div class="progress" id="progress" hidden>
@@ -272,34 +263,76 @@
     </button>
   </div>
 </div>
-
 <div class="toast" id="toast"></div>
 
 <script>
 const $ = s => document.querySelector(s);
-let backend='local', goalText='', curStep=null, curDetail='', history=[];
-const doneKey='stepmate_done_v1';
-const doneSet=new Set(JSON.parse(localStorage.getItem(doneKey)||'[]'));
-const saveDone=()=>localStorage.setItem(doneKey,JSON.stringify([...doneSet]));
+const esc = s => (s||'').replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));
+function toast(t){const el=$('#toast');el.textContent=t;el.classList.add('show');
+  clearTimeout(el._t);el._t=setTimeout(()=>el.classList.remove('show'),2400);}
 
-// 示例目标
-const SAMPLES=['三个月内减重 8 公斤','从零做一份能投出去的简历','备考期末不挂科','两周搭一个个人网站','攒下第一支镜头的钱'];
+// ================= Provider 设置 =================
+const PRESETS = {
+  ollama:     {label:'Ollama 本地（免费）', base:'http://127.0.0.1:11434/v1', model:'qwen3:8b-16k', key:''},
+  deepseek:   {label:'DeepSeek',            base:'https://api.deepseek.com/v1', model:'deepseek-chat', key:''},
+  siliconflow:{label:'硅基流动',            base:'https://api.siliconflow.cn/v1', model:'deepseek-ai/DeepSeek-V3', key:''},
+  qwen:       {label:'通义千问',            base:'https://dashscope.aliyuncs.com/compatible-mode/v1', model:'qwen-plus', key:''},
+  zhipu:      {label:'智谱 GLM',            base:'https://open.bigmodel.cn/api/paas/v4', model:'glm-4-flash', key:''},
+  openrouter: {label:'OpenRouter',          base:'https://openrouter.ai/api/v1', model:'openai/gpt-4o-mini', key:''},
+  custom:     {label:'自定义接口…',          base:'', model:'', key:''},
+};
+let presetId = localStorage.getItem('sm_preset') || 'ollama';
+if(!PRESETS[presetId]) presetId='ollama';
+$('#preset').innerHTML = Object.entries(PRESETS).map(([k,v])=>`<option value="${k}">${v.label}</option>`).join('');
+function applyPreset(){
+  const p = PRESETS[presetId], saved = JSON.parse(localStorage.getItem('sm_provider')||'{}');
+  $('#pmodel').value = saved[presetId]?.model ?? p.model;
+  $('#pkey').value   = saved[presetId]?.key   ?? p.key;
+  $('#pbase').value  = saved[presetId]?.base  ?? p.base;
+  $('#pbase').hidden = presetId !== 'custom';
+}
+function currentProvider(){
+  return {base: $('#pbase').value.trim() || PRESETS[presetId].base,
+          model: $('#pmodel').value.trim() || PRESETS[presetId].model,
+          key: $('#pkey').value.trim(), label: PRESETS[presetId].label};
+}
+function saveProvider(){
+  const saved = JSON.parse(localStorage.getItem('sm_provider')||'{}');
+  saved[presetId] = {base:$('#pbase').value.trim(), model:$('#pmodel').value.trim(), key:$('#pkey').value.trim()};
+  localStorage.setItem('sm_provider', JSON.stringify(saved));
+  localStorage.setItem('sm_preset', presetId);
+}
+$('#preset').value = presetId;
+$('#preset').addEventListener('change', e=>{presetId=e.target.value; applyPreset();});
+['#pmodel','#pkey','#pbase'].forEach(s=>$(s).addEventListener('change', saveProvider));
+applyPreset();
+
+// ================= 粒度滑杆 =================
+const LEVEL_NAMES = {1:'随便拆拆',2:'大致方向',3:'适中',4:'比较细',5:'精确到天'};
+$('#level').addEventListener('input', e=>$('#levelName').textContent = LEVEL_NAMES[e.target.value]);
+
+// ================= 持久化 =================
+let goalText='', stepsData=[], curStep=null, curDetail='', curStepKey='';
+const PLAN_KEY='sm_plan_v2';
+const chatKey = k => 'sm_chat_' + btoa(unescape(encodeURIComponent(k))).replace(/=/g,'');
+function savePlan(){
+  localStorage.setItem(PLAN_KEY, JSON.stringify({goal:goalText, steps:stepsData, savedAt:Date.now()}));
+}
+function loadPlan(){
+  try{ return JSON.parse(localStorage.getItem(PLAN_KEY)); }catch(e){ return null; }
+}
+function clearPlan(){ localStorage.removeItem(PLAN_KEY); }
+
+// ================= 示例目标 =================
+const SAMPLES=['三个月内减重 8 公斤','从零做一份能投出去的简历','备考期末不挂科','两周搭一个个人网站','一个月读完 4 本书并写笔记'];
 $('#chips').innerHTML=SAMPLES.map(s=>`<button class="chip">${s}</button>`).join('');
 $('#chips').addEventListener('click',e=>{
   if(e.target.classList.contains('chip')){ $('#goal').value=e.target.textContent; $('#goal').focus(); }
 });
 
-$('#backend').addEventListener('click',e=>{
-  const b=e.target.dataset.b; if(!b)return;
-  backend=b;
-  [...$('#backend').children].forEach(x=>x.classList.toggle('on',x.dataset.b===b));
-  $('#keybox').hidden = b!=='deepseek';
-});
-$('#go').addEventListener('click',decompose);
-$('#closeDrawer').addEventListener('click',()=>$('#drawer').classList.remove('show'));
-$('#send').addEventListener('click',sendMsg);
-$('#cm').addEventListener('keydown',e=>{if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();sendMsg();}});
-
+// ================= 分解 =================
+$('#go').addEventListener('click', decompose);
+$('#levelName').textContent = LEVEL_NAMES[3];
 async function decompose(){
   const goal=$('#goal').value.trim();
   if(!goal){setErr('先写点目标');return;}
@@ -308,150 +341,235 @@ async function decompose(){
   $('#go').disabled=true;
   try{
     const r=await fetch('/api/decompose',{method:'POST',headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({goal,backend,api_key:$('#apikey').value.trim()})});
+      body:JSON.stringify({goal, level:+$('#level').value, provider:currentProvider()})});
     const d=await r.json();
-    if(!r.ok)throw new Error(d.error||'失败');
-    renderSteps(d);
-  }catch(err){setErr(err.message);}
-  finally{$('#status').textContent='';$('#go').disabled=false;}
+    if(!r.ok) throw new Error(d.error||'失败');
+    stepsData=d.steps;
+    savePlan();
+    renderTree();
+    toast('拆好了！点任意步骤和 AI 一起做');
+  }catch(err){ setErr(err.message); }
+  finally{ $('#status').textContent=''; $('#go').disabled=false; }
 }
+function setErr(m){$('#err').textContent=m;}
 
-function renderSteps(d){
-  $('#tree').hidden=false; $('#progress').hidden=false;
-  $('#tree').innerHTML='';
-  d.steps.forEach((s,i)=>$('#tree').appendChild(stepEl(s,i)));
+// ================= 步骤树渲染 =================
+const ICONS = {
+  chat:'<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.05" stroke-linecap="round" stroke-linejoin="round"><path d="M7.9 20A9 9 0 1 0 4 16.1L2 22Z"/></svg>',
+  wand:'<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.05" stroke-linecap="round" stroke-linejoin="round"><path d="M15 4V2"/><path d="M15 16v-2"/><path d="M8 9h2"/><path d="M20 9h2"/><path d="M17.8 11.8 19 13"/><path d="M17.8 6.2 19 5"/><path d="m3 21 9-9"/><path d="M12.2 6.2 11 5"/></svg>',
+  edit:'<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.05" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>',
+  del:'<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.05" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg>',
+  up:'<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.05" stroke-linecap="round" stroke-linejoin="round"><path d="m18 15-6-6-6 6"/></svg>',
+  down:'<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.05" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>',
+};
+const doneSet = new Set(JSON.parse(localStorage.getItem('sm_done_v1')||'[]'));
+const saveDone = () => localStorage.setItem('sm_done_v1', JSON.stringify([...doneSet]));
+
+function renderTree(){
+  $('#tree').hidden = stepsData.length===0;
+  $('#progress').hidden = stepsData.length===0;
+  const box=$('#tree'); box.innerHTML='';
+  stepsData.forEach((s,i)=>box.appendChild(stepEl(s,i)));
+  const add=document.createElement('button');
+  add.className='add-step'; add.textContent='＋ 手动加一步';
+  add.addEventListener('click', addStep);
+  box.appendChild(add);
   updateProgress();
 }
-
+const keyOf = s => s.title;
 function stepEl(s,i){
-  const key=s.title;
   const el=document.createElement('div');
-  el.className='step'+(doneSet.has(key)?' done':'');
-  const hasSub=s.substeps&&s.substeps.length;
+  el.className='step'+(doneSet.has(keyOf(s))?' done':'');
   el.innerHTML=`
     <div class="step-head">
-      <div class="n-badge">${i+1}</div>
+      <div class="n-badge" title="点击标记完成">${i+1}</div>
       <div class="step-title">
         <div class="t">${esc(s.title)}</div>
         ${s.detail?`<div class="d">${esc(s.detail)}</div>`:''}
       </div>
       <div class="acts">
-        <button class="icon-btn done-btn" title="标记完成">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.05" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>
-        </button>
-        <button class="icon-btn chat-btn" title="和 AI 一起做">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.05" stroke-linecap="round" stroke-linejoin="round"><path d="M7.9 20A9 9 0 1 0 4 16.1L2 22Z"/></svg>
-        </button>
-        ${hasSub?'<button class="icon-btn sub-btn" title="展开子步骤"><svg class="caret" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.05" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></svg></button>':''}
+        <button class="icon-btn chat-btn" title="和 AI 一起做">${ICONS.chat}</button>
+        <button class="icon-btn wand-btn" title="AI 再拆细一点">${ICONS.wand}</button>
+        <button class="icon-btn edit-btn" title="重命名">${ICONS.edit}</button>
+        <button class="icon-btn" title="上移" data-mv="-1">${ICONS.up}</button>
+        <button class="icon-btn" title="下移" data-mv="1">${ICONS.down}</button>
+        <button class="icon-btn del-btn" title="删除">${ICONS.del}</button>
       </div>
     </div>`;
   const subwrap=document.createElement('div'); subwrap.className='subwrap'; subwrap.hidden=true;
-  if(hasSub){
+  if(s.substeps&&s.substeps.length){
     s.substeps.forEach((ss,j)=>{
       const sub=document.createElement('div'); sub.className='sub';
       sub.innerHTML=`<span class="dot"></span><div><div class="st">${i+1}.${j+1} ${esc(ss.title)}</div>${ss.detail?`<div class="sd">${esc(ss.detail)}</div>`:''}</div>`;
-      sub.addEventListener('click',ev=>{ev.stopPropagation();openChat(`${i+1}.${j+1} ${ss.title}`,ss.detail||'');});
+      sub.addEventListener('click',ev=>{ev.stopPropagation();openChat(`${i+1}.${j+1} ${ss.title}`,ss.detail||'',`${keyOf(s)}::${j}`);});
       subwrap.appendChild(sub);
     });
     el.appendChild(subwrap);
   }
-  el.querySelector('.done-btn').addEventListener('click',ev=>{
-    ev.stopPropagation();
-    doneSet.has(key)?doneSet.delete(key):doneSet.add(key); saveDone();
-    el.classList.toggle('done',doneSet.has(key)); updateProgress();
+  el.querySelector('.n-badge').addEventListener('click',()=>{
+    doneSet.has(keyOf(s))?doneSet.delete(keyOf(s)):doneSet.add(keyOf(s)); saveDone(); renderTree();
   });
-  el.querySelector('.chat-btn').addEventListener('click',ev=>{ev.stopPropagation();openChat(`${i+1}. ${s.title}`,s.detail||'');});
-  const subBtn=el.querySelector('.sub-btn');
-  if(subBtn)subBtn.addEventListener('click',ev=>{
-    ev.stopPropagation(); subwrap.hidden=!subwrap.hidden;
-    subBtn.querySelector('.caret').classList.toggle('open-caret',!subwrap.hidden);
+  el.querySelector('.chat-btn').addEventListener('click',()=>openChat(`${i+1}. ${s.title}`,s.detail||'',keyOf(s)));
+  el.querySelector('.wand-btn').addEventListener('click',ev=>resplit(ev.currentTarget,s));
+  el.querySelector('.edit-btn').addEventListener('click',()=>inlineEdit(el,s));
+  el.querySelector('[data-mv]').addEventListener('click',ev=>moveStep(i,+ev.currentTarget.dataset.mv));
+  el.querySelector('.del-btn').addEventListener('click',()=>{
+    if(confirm(`删除步骤「${s.title}」？`)){ stepsData.splice(i,1); savePlan(); renderTree(); }
   });
+  el.querySelector('.step-title').addEventListener('click',()=>{ if(s.substeps&&s.substeps.length){const sw=el.querySelector('.subwrap'); sw.hidden=!sw.hidden;} });
   return el;
 }
-
 function updateProgress(){
-  const total=document.querySelectorAll('#tree .step').length;
-  const done=doneSet.size;
+  const total=stepsData.length;
+  const done=stepsData.filter(s=>doneSet.has(keyOf(s))).length;
   $('#fill').style.width=total?Math.round(done/total*100)+'%':'0';
   $('#pnum').textContent=`${done} / ${total} 已完成`;
 }
+function addStep(){
+  const t=prompt('新步骤标题：'); if(!t||!t.trim())return;
+  stepsData.push({title:t.trim(),detail:'',substeps:[]});
+  savePlan(); renderTree();
+}
+function moveStep(i,dir){
+  const j=i+dir;
+  if(j<0||j>=stepsData.length)return;
+  [stepsData[i],stepsData[j]]=[stepsData[j],stepsData[i]];
+  savePlan(); renderTree();
+}
+function inlineEdit(el,s){
+  const tEl=el.querySelector('.t');
+  const input=document.createElement('input');
+  input.value=s.title;
+  tEl.replaceWith(input); input.focus(); input.select();
+  const commit=()=>{ s.title=input.value.trim()||s.title; savePlan(); renderTree(); };
+  input.addEventListener('keydown',e=>{if(e.key==='Enter')input.blur();});
+  input.addEventListener('blur',commit);
+}
+async function resplit(btn,s){
+  if(btn.disabled)return;
+  btn.disabled=true;
+  try{
+    const r=await fetch('/api/decompose',{method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({goal:`${s.title}（${s.detail||''}）`, level:Math.min(5,(+$('#level').value)+2),
+        provider:currentProvider()})});
+    const d=await r.json();
+    if(!r.ok) throw new Error(d.error||'失败');
+    s.substeps=d.steps.slice(0,4).map(x=>({title:x.title,detail:x.detail||''}));
+    savePlan(); renderTree();
+    toast('已拆细，点标题展开查看');
+  }catch(err){ toast('⚠️ '+err.message); }
+  finally{ btn.disabled=false; }
+}
 
-function openChat(title,detail){
-  curStep=title; curDetail=detail; history=[];
+// ================= 聊天（流式 + 历史持久化） =================
+$('#closeDrawer').addEventListener('click',()=>$('#drawer').classList.remove('show'));
+$('#send').addEventListener('click',sendMsg);
+$('#cm').addEventListener('keydown',e=>{if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();sendMsg();}});
+
+function openChat(title,detail,key){
+  curStep=title; curDetail=detail; curStepKey=key||title;
   $('#dhTitle').textContent='和 AI 一起做：'+title;
-  $('#msgs').innerHTML='';
+  const msgs=$('#msgs'); msgs.innerHTML='';
+  const saved=JSON.parse(localStorage.getItem(chatKey(curStepKey))||'[]');
+  if(saved.length===0){
+    addMsg('a',`聚焦这一步：「${title}」\n想先做出点什么？草稿、清单、话术、计划，直接说，我来产出。`);
+  }else{
+    saved.forEach(m=>addMsg(m.role==='user'?'u':'a', m.role==='user'?esc(m.content):mdRender(m.content)));
+    toast('已恢复上次的对话记录');
+  }
   $('#drawer').classList.add('show');
-  addMsg('a',`聚焦这一步：「${title}」\n想先做出点什么？草稿、清单、话术、计划，直接说，我来产出。`);
+}
+function getHistory(){
+  return JSON.parse(localStorage.getItem(chatKey(curStepKey))||'[]').slice(-12);
 }
 async function sendMsg(){
   const txt=$('#cm').value.trim(); if(!txt)return;
-  addMsg('u',txt); history.push({role:'user',content:txt});
+  addMsg('u',esc(txt));
+  const hist=getHistory(); hist.push({role:'user',content:txt});
+  localStorage.setItem(chatKey(curStepKey),JSON.stringify(hist));
   $('#cm').value='';
-  const loading=addMsg('a','<span class="spin"></span>');
+  const bubble=addMsg('a','<span class="spin"></span>');
+  bubble.classList.add('streaming');
   try{
-    const r=await fetch('/api/chat',{method:'POST',headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({goal:goalText,step:curStep,step_detail:curDetail,message:txt,history,backend,api_key:$('#apikey').value.trim()})});
-    const d=await r.json();
-    if(!r.ok)throw new Error(d.error||'失败');
-    history.push({role:'assistant',content:d.reply});
-    loading.innerHTML=renderRich(d.reply);
-  }catch(err){loading.textContent='⚠️ '+err.message;}
+    const r=await fetch('/api/chat/stream',{method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({goal:goalText,step:curStep,step_detail:curDetail,message:txt,
+        history:hist.slice(0,-1),provider:currentProvider()})});
+    if(!r.ok){ const d=await r.json(); throw new Error(d.error||'失败'); }
+    const reader=r.body.getReader();
+    const dec=new TextDecoder();
+    let buf='', full='';
+    while(true){
+      const {done,value}=await reader.read();
+      if(done)break;
+      buf+=dec.decode(value,{stream:true});
+      const lines=buf.split('\n'); buf=lines.pop();
+      for(const line of lines){
+        if(!line.startsWith('data:'))continue;
+        const payload=line.slice(5).trim();
+        if(payload==='[DONE]')continue;
+        try{
+          const j=JSON.parse(payload);
+          if(j.error) throw new Error(j.error);
+          if(j.t){ full+=j.t; bubble.innerHTML=esc(full).replace(/\n/g,'<br');
+            $('#msgs').scrollTop=$('#msgs').scrollHeight; }
+        }catch(e){ if(e.message&&!e.message.includes('JSON')) throw e; }
+      }
+    }
+    bubble.classList.remove('streaming');
+    bubble.innerHTML=mdRender(full);
+    hist.push({role:'assistant',content:full});
+    localStorage.setItem(chatKey(curStepKey),JSON.stringify(hist));
+  }catch(err){
+    bubble.classList.remove('streaming');
+    bubble.textContent='⚠️ '+err.message;
+  }
   $('#msgs').scrollTop=$('#msgs').scrollHeight;
 }
 function addMsg(role,html){
   const m=document.createElement('div');m.className='m '+role;m.innerHTML=html;
   $('#msgs').appendChild(m);$('#msgs').scrollTop=$('#msgs').scrollHeight;return m;
 }
-function renderRich(text){
-  return esc(text).replace(/```([\s\S]*?)```/g,(_,c)=>`<pre><button class="copy" onclick="copyPre(this)">复制</button><code>${c.replace(/^\n/,'')}</code></pre>`).replace(/\n/g,'<br>');
+
+// ================= Markdown 渲染 =================
+function mdRender(text){
+  const blocks=[];
+  let t=esc(text).replace(/```(\w*)\n?([\s\S]*?)```/g,(m,lang,code)=>{
+    blocks.push(code.replace(/\n$/,''));
+    return `\u0000CB${blocks.length-1}\u0000`;
+  });
+  t=t.replace(/`([^`\n]+)`/g,'<code>$1</code>')
+     .replace(/\*\*([^*\n]+)\*\*/g,'<b>$1</b>')
+     .replace(/\[([^\]]+)\]\((https?:[^)\s]+)\)/g,'<a href="$2" target="_blank" rel="noopener">$1</a>');
+  const lines=t.split('\n'); let html='',inUl=false,inOl=false;
+  const close=()=>{if(inUl){html+='</ul>';inUl=false}if(inOl){html+='</ol>';inOl=false}};
+  for(const ln of lines){
+    let m;
+    if(m=ln.match(/^#{1,3}\s+(.*)/)){close();html+=`<h3>${m[1]}</h3>`}
+    else if(m=ln.match(/^#{4,6}\s+(.*)/)){close();html+=`<h4>${m[1]}</h4>`}
+    else if(m=ln.match(/^\s*[-*]\s+(.*)/)){if(!inUl){close();html+='<ul>';inUl=true}html+=`<li>${m[1]}</li>`}
+    else if(m=ln.match(/^\s*\d+[.、]\s+(.*)/)){if(!inOl){close();html+='<ol>';inOl=true}html+=`<li>${m[1]}</li>`}
+    else if(ln.trim()===''){close()}
+    else{close();html+=`<p>${ln}</p>`}
+  }
+  close();
+  return html.replace(/\u0000CB(\d+)\u0000/g,(m,i)=>
+    `<pre><button class="copy" onclick="copyPre(this)">复制</button><code>${blocks[i]}</code></pre>`);
 }
 function copyPre(btn){const c=btn.parentElement.querySelector('code').innerText;navigator.clipboard.writeText(c);btn.textContent='已复制';setTimeout(()=>btn.textContent='复制',1200);}
-function esc(s){return (s||'').replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));}
-function setErr(m){$('#err').textContent=m;}
 
-// ===== 语音输入（Safari/Chrome 原生语音识别，中文）=====
-const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
-function toast(t){const el=$('#toast');el.textContent=t;el.classList.add('show');
-  clearTimeout(el._t);el._t=setTimeout(()=>el.classList.remove('show'),2000);}
-function attachVoice(btn,ta){
-  if(!SR){btn.style.opacity=.4;
-    btn.addEventListener('click',()=>toast('当前浏览器不支持语音识别，用 Safari 打开即可'));
-    return;}
-  let rec=null,listening=false;
-  btn.addEventListener('click',()=>{
-    if(listening){rec.stop();return;}
-    rec=new SR();rec.lang='zh-CN';rec.interimResults=true;rec.continuous=false;
-    const base=ta.value;
-    rec.onresult=e=>{let fin='',inter='';
-      for(const r of e.results){r.isFinal?fin+=r[0].transcript:inter+=r[0].transcript;}
-      ta.value=(base?base+' ':'')+fin+inter;
-      ta.dispatchEvent(new Event('input'));};
-    rec.onend=()=>{listening=false;btn.classList.remove('rec');ta.focus();};
-    rec.onerror=ev=>{listening=false;btn.classList.remove('rec');
-      toast(ev.error==='not-allowed'?'麦克风权限被拒：系统设置 → 隐私与安全性 → 麦克风':'语音识别出错：'+ev.error);};
-    try{rec.start();listening=true;btn.classList.add('rec');toast('正在听…再按一次停止');}
-    catch(e){toast('启动失败，请重试');}
-  });
-}
-attachVoice($('#micGoal'),$('#goal'));
-attachVoice($('#micChat'),$('#cm'));
-
-// ===== 导出可勾选清单 =====
+// ================= 导出清单 =================
 function buildMarkdown(){
   const g=goalText||$('#goal').value.trim()||'未命名目标';
   let md=`# 目标：${g}\n\n`;
-  document.querySelectorAll('#tree .step').forEach(el=>{
-    const done=el.classList.contains('done');
-    md+=`- [${done?'x':' '}] ${el.querySelector('.t').textContent}\n`;
-    el.querySelectorAll('.sub .st').forEach(s=>{
-      md+=`    - [ ] ${s.textContent.replace(/^\d+(\.\d+)*\s*/,'')}\n`;});
+  stepsData.forEach(s=>{
+    md+=`- [${doneSet.has(keyOf(s))?'x':' '}] ${s.title}\n`;
+    (s.substeps||[]).forEach(ss=>{md+=`    - [ ] ${ss.title}\n`;});
   });
   md+=`\n> 由步步伴 StepMate 生成 · ${new Date().toLocaleString('zh-CN')}\n`;
   return md;
 }
 $('#copyMd').addEventListener('click',async()=>{
-  try{await navigator.clipboard.writeText(buildMarkdown());
-    toast('清单已复制，可粘贴到备忘录 / Obsidian / 待办');}
+  try{await navigator.clipboard.writeText(buildMarkdown());toast('清单已复制，可粘贴到备忘录 / Obsidian / 待办');}
   catch(e){toast('复制失败，请用「导出 .md」');}
 });
 $('#dlMd').addEventListener('click',()=>{
@@ -463,6 +581,45 @@ $('#dlMd').addEventListener('click',()=>{
   setTimeout(()=>URL.revokeObjectURL(a.href),1000);
   toast('已导出 '+name);
 });
+
+// ================= 恢复上次进度 =================
+(function restore(){
+  const p=loadPlan();
+  if(!p||!p.steps||!p.steps.length)return;
+  goalText=p.goal; stepsData=p.steps;
+  renderTree();
+  $('#goal').value=p.goal;
+  const t=new Date(p.savedAt);
+  $('#restoreText').textContent=`已恢复上次进度：「${p.goal}」（${t.toLocaleString('zh-CN')}）`;
+  $('#restoreTip').hidden=false;
+  $('#discardBtn').addEventListener('click',()=>{
+    clearPlan(); stepsData=[]; goalText=''; doneSet.clear(); saveDone();
+    $('#tree').hidden=true;$('#progress').hidden=true;$('#restoreTip').hidden=true;$('#goal').value='';
+  });
+})();
+
+// ================= 语音输入 =================
+const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
+function attachVoice(btn,ta){
+  if(!SR){btn.style.opacity=.4;
+    btn.addEventListener('click',()=>toast('当前浏览器不支持语音识别，用 Safari 打开即可'));return;}
+  let rec=null,listening=false;
+  btn.addEventListener('click',()=>{
+    if(listening){rec.stop();return;}
+    rec=new SR();rec.lang='zh-CN';rec.interimResults=true;rec.continuous=false;
+    const base=ta.value;
+    rec.onresult=e=>{let fin='',inter='';
+      for(const r of e.results){r.isFinal?fin+=r[0].transcript:inter+=r[0].transcript;}
+      ta.value=(base?base+' ':'')+fin+inter;};
+    rec.onend=()=>{listening=false;btn.classList.remove('rec');ta.focus();};
+    rec.onerror=ev=>{listening=false;btn.classList.remove('rec');
+      toast(ev.error==='not-allowed'?'麦克风权限被拒：系统设置 → 隐私与安全性 → 麦克风':'语音识别出错：'+ev.error);};
+    try{rec.start();listening=true;btn.classList.add('rec');toast('正在听…再按一次停止');}
+    catch(e){toast('启动失败，请重试');}
+  });
+}
+attachVoice($('#micGoal'),$('#goal'));
+attachVoice($('#micChat'),$('#cm'));
 </script>
 </body>
 </html>
