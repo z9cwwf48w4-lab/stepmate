@@ -48,6 +48,17 @@
     color:var(--sub);font-size:var(--f-sm);padding:6px 14px;cursor:pointer;transition:all var(--dur) var(--ease)}
   .chip:hover{border-color:var(--accent);color:var(--accent-deep);background:var(--accent-soft)}
   .chip:active{transform:scale(.97)}
+  .chip-dice{border:1px dashed var(--line-strong);border-radius:var(--r-full);background:transparent;
+    padding:6px 14px;font-size:var(--f-xs);color:var(--sub);cursor:pointer;font-family:inherit}
+  .chip-dice:hover{border-color:var(--accent);color:var(--accent-deep);background:var(--accent-soft)}
+  .chip-dice:active{transform:scale(.95)}
+  .prompts{display:flex;gap:var(--s-2);flex-wrap:wrap;align-items:center;
+    padding:var(--s-2) var(--s-4) 0;background:var(--surface)}
+  .p-chip{border-style:solid;border-color:var(--line);padding:4px 12px}
+  .p-chip:hover{border-style:solid}
+  .p-dice{border:1px dashed var(--line-strong);border-radius:var(--r-full);background:transparent;
+    padding:4px 10px;font-size:var(--f-xs);color:var(--sub);cursor:pointer;font-family:inherit}
+  .p-dice:hover{border-color:var(--accent);color:var(--accent-deep);background:var(--accent-soft)}
   /* ===== 设置区 ===== */
   .settings{display:flex;gap:var(--s-3);flex-wrap:wrap;align-items:center;margin-top:var(--s-4);
     font-size:var(--f-sm);color:var(--sub)}
@@ -193,7 +204,7 @@
     </div>
     <h1>步步伴 StepMate</h1>
   </header>
-  <p class="tag">把大目标拆成一步步，<b>每一步都有 AI 执行搭档陪你真的做出来</b>——不是只给建议。AI 接口随便换：Ollama / DeepSeek / 通义 / 智谱 / 任意 OpenAI 兼容接口。</p>
+  <p class="tag">把大目标拆成一步步，<b>每一步都有 AI 执行搭档陪你真的做出来</b>——不是只给建议。</p>
 
   <div class="card">
     <div class="goalbox">
@@ -253,6 +264,7 @@
 <div class="drawer" id="drawer">
   <div class="dh"><b id="dhTitle">和 AI 一起做</b><button class="x-btn" id="closeDrawer">收起</button></div>
   <div class="msgs" id="msgs"></div>
+  <div class="prompts" id="prompts"></div>
   <div class="inputbar">
     <textarea id="cm" placeholder="告诉 AI 这一步你想做出什么……（Enter 发送）"></textarea>
     <button class="mic-btn" id="micChat" title="语音输入">
@@ -323,11 +335,48 @@ function loadPlan(){
 }
 function clearPlan(){ localStorage.removeItem(PLAN_KEY); }
 
-// ================= 示例目标 =================
-const SAMPLES=['三个月内减重 8 公斤','从零做一份能投出去的简历','备考期末不挂科','两周搭一个个人网站','一个月读完 4 本书并写笔记'];
-$('#chips').innerHTML=SAMPLES.map(s=>`<button class="chip">${s}</button>`).join('');
+// ================= 示例目标（随机池，🎲换一批） =================
+const SAMPLE_POOL=[
+ '三个月内减重 8 公斤','从零做一份能投出去的简历','备考期末不挂科','两周搭一个个人网站',
+ '一个月读完 4 本书并写笔记','30 天学会做 10 道拿手菜','三个月跑完一次 10 公里',
+ '整理闲置物品卖出 500 元','一个月搞定英语四级核心 2000 词','两周养成 23 点前睡觉的习惯',
+ '一个月做出第一支 Vlog','两个月学会吉他弹唱 3 首歌','三周内把房间改成舒服的书房',
+ '一个月掌握 Excel 数据透视表','两周给爸妈策划一次周边游','9 月底前股票盈利 500 元',
+ '一天内理清本周最重要的三件事','毕业前攒下一台新相机的钱','一周内写完一份读书心得','开学前补完落下的网课'];
+function shuffle(a){const b=[...a];for(let i=b.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[b[i],b[j]]=[b[j],b[i]];}return b;}
+function renderChips(){
+  $('#chips').innerHTML=shuffle(SAMPLE_POOL).slice(0,5).map(s=>`<button class="chip">${s}</button>`).join('')
+    +'<button class="chip-dice" id="dice" title="换一批">🎲 换一批</button>';
+}
+renderChips();
 $('#chips').addEventListener('click',e=>{
+  if(e.target.id==='dice'){renderChips();return;}
   if(e.target.classList.contains('chip')){ $('#goal').value=e.target.textContent; $('#goal').focus(); }
+});
+
+// ================= 猜你想问（聊天快捷提问，随机 3 条） =================
+const PROMPT_TPL=[
+ '帮我列一个「{s}」的最小行动清单',
+ '「{s}」最容易在哪儿卡住？给我规避方案',
+ '现在就帮我产出「{s}」的第一版成品',
+ '给我一个 15 分钟内能完成的「{s}」微任务',
+ '「{s}」做到什么程度算合格？给我验收标准',
+ '用更简单的说法解释「{s}」到底要做什么',
+ '帮我估算「{s}」要花多久，怎么压缩时间',
+ '「{s}」有没有现成模板或工具可以直接用？',
+ '帮我预演一遍做「{s}」时最容易犯的错'];
+let promptPicks=[];
+function renderPrompts(){
+  promptPicks=shuffle(PROMPT_TPL).slice(0,3);
+  const short=curStep.length>9?curStep.slice(0,9)+'…':curStep;
+  $('#prompts').innerHTML=promptPicks.map((t,i)=>`<button class="chip p-chip" data-i="${i}">${esc(t.replace('{s}',short))}</button>`).join('')
+    +'<button class="p-dice" id="pdice" title="换一批">🎲</button>';
+}
+$('#prompts').addEventListener('click',e=>{
+  if(e.target.id==='pdice'){renderPrompts();return;}
+  const c=e.target.closest('.p-chip'); if(!c)return;
+  $('#cm').value=promptPicks[+c.dataset.i].replace('{s}',curStep);
+  $('#cm').focus();
 });
 
 // ================= 分解 =================
@@ -477,6 +526,7 @@ function openChat(title,detail,key){
     saved.forEach(m=>addMsg(m.role==='user'?'u':'a', m.role==='user'?esc(m.content):mdRender(m.content)));
     toast('已恢复上次的对话记录');
   }
+  renderPrompts();
   $('#drawer').classList.add('show');
 }
 function getHistory(){
