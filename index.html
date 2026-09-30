@@ -406,9 +406,16 @@ function fmtTime(ts){ if(!ts)return''; const d=new Date(ts*1000);
   return d.toLocaleDateString('zh-CN')+' '+d.toLocaleTimeString('zh-CN',{hour:'2-digit',minute:'2-digit'}); }
 async function renderHistory(){
   const box=$('#hlist'); box.innerHTML='<div class="mempty">加载中…</div>';
-  let plans=[];
-  try{ plans=((await (await fetch('/api/plans')).json()).plans)||[]; }
-  catch(e){ box.innerHTML='<div class="mempty">服务端不可达，稍后再试</div>'; return; }
+  let plans=[], tries=0;
+  while(tries<2){
+    try{ plans=((await (await fetch('/api/plans')).json()).plans)||[]; break; }
+    catch(e){
+      tries++;
+      if(tries>=2){ box.innerHTML='<div class="mempty">后端没在运行。重新打开 StepMate App 即可恢复。</div>'; return; }
+      box.innerHTML='<div class="mempty">连接后端中…</div>';
+      await new Promise(r=>setTimeout(r,1500));
+    }
+  }
   if(!plans.length){ box.innerHTML='<div class="mempty">还没有历史计划。拆一个目标，它会自动存到这里。</div>'; return; }
   box.innerHTML='';
   plans.forEach(p=>{

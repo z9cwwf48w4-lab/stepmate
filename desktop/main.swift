@@ -54,21 +54,26 @@ func healthzOk(port: Int) -> Bool {
     return ok
 }
 
-func startBackend() -> Bool {
-    // 1) 复用已有同款服务（校验 /healthz 身份，退出时不误杀）
-    if healthzOk(port: 8787) {
-        backendPort = 8787; ownsProcess = false
-        Log.write("复用 8787 已有服务")
-        return true
-    }
-    guard !rootPath.isEmpty, fm.fileExists(atPath: pythonPath) else {
-        Log.write("资源缺失 root=\(rootPath) python=\(pythonPath)")
-        return false
-    }
-    // 2) 动态端口启动，避免探测竞态
+func portFree(_ port: Int) -> Bool {
+    guard let url = URL(string: "http://127.0.0.1:\(port)/healthz") else { return false }
+    var req = URLRequest(url: url); req.timeoutInterval = 2
+    var free = false
+    let sem = DispatchSemaphore(value: 0)
+    URLSession.shared.dataTask(with: req) { _, _, err in
+        if err != nil { free = true }  // 连不上 = 空闲
+        sem.signal()
+    }.resume()
+    sem.wait()
+    return free
+}
+
+// 固定端口段: 同端口重启 => 已打开的窗口 origin 不变, 后端恢复后自动恢复可用
+let preferredPorts = [8787, 8788, 8789, 8790]
+
+func spawnBackend(port: Int) -> Bool {
     let p = Process()
     p.executableURL = URL(fileURLWithPath: pythonPath)
-    p.arguments = ["-m", "uvicorn", "app:app", "--host", "127.0.0.1", "--port", "0"]
+    p.arguments = ["-m", "uvicorn", "app:app", "--host", "127.0.0.1", "--port", String(port)]
     p.currentDirectoryURL = URL(fileURLWithPath: rootPath)
     p.environment = [
         "PATH": "/usr/bin:/bin:/usr/local/bin",
@@ -83,32 +88,34 @@ func startBackend() -> Bool {
     p.standardError = pipe
     do { try p.run() } catch { Log.write("启动失败: \(error)"); return false }
     ownsProcess = true
-
-    // 3) 从启动横幅解析真实端口
-    let fh = pipe.fileHandleForReading
-    var buf = Data()
-    let deadline = Date().addingTimeInterval(30)
-    while Date() < deadline && backendPort == 0 {
-        let d = fh.availableData
-        if d.isEmpty { usleep(100_000); continue }
-        buf.append(d)
-        guard let s = String(data: buf, encoding: .utf8) else { continue }
-        for line in s.components(separatedBy: "\n") {
-            if let r = line.range(of: "http://127.0.0.1:") {
-                let digits = line[r.upperBound...].prefix { $0.isNumber }
-                if let n = Int(digits), n > 0 { backendPort = n; break }
-            }
-        }
-        if backendPort == 0, p.isRunning == false { Log.write("后端进程提前退出"); return false }
-    }
-    guard backendPort > 0 else { Log.write("30s 内未解析到端口"); return false }
-
-    // 4) 等健康检查通过
-    for _ in 0..<20 {
-        if healthzOk(port: backendPort) { Log.write("后端就绪 port=\(backendPort)"); return true }
+    for _ in 0..<40 {
+        if healthzOk(port: port) { Log.write("后端就绪 port=\(port)"); return true }
         usleep(500_000)
+        if !p.isRunning { Log.write("后端进程提前退出"); return false }
     }
-    Log.write("后端端口 \(backendPort) 健康检查未通过")
+    Log.write("端口 \(port) 健康检查未通过")
+    return false
+}
+
+func startBackend() -> Bool {
+    // 1) 已有同款服务在跑（含上次自己拉起的）：直接复用
+    for port in preferredPorts {
+        if healthzOk(port: port) {
+            backendPort = port; ownsProcess = false
+            Log.write("复用 \(port) 已有服务")
+            return true
+        }
+    }
+    guard !rootPath.isEmpty, fm.fileExists(atPath: pythonPath) else {
+        Log.write("资源缺失 root=\(rootPath) python=\(pythonPath)")
+        return false
+    }
+    // 2) 在固定端口段里找空闲口启动
+    for port in preferredPorts where portFree(port) {
+        if spawnBackend(port: port) { backendPort = port; return true }
+        return false
+    }
+    Log.write("8787-8790 均被非 stepmate 服务占用")
     return false
 }
 
@@ -116,6 +123,17 @@ func stopBackendIfOwned() {
     guard ownsProcess, backendProc.isRunning else { return }
     backendProc.terminate()
     Log.write("已停止自启的后端进程")
+}
+
+// ---------- 后端守护: 自启的后端意外挂掉时, 每 5s 探测并在同一端口重新拉起 ----------
+func watchBackend() {
+    DispatchQueue.global(qos: .utility).asyncAfter(deadline: .now() + 5) {
+        if ownsProcess && !healthzOk(port: backendPort) {
+            Log.write("守护: 后端失联, 同端口重拉 \(backendPort)")
+            _ = spawnBackend(port: backendPort)
+        }
+        watchBackend()
+    }
 }
 
 // ---------- 窗口与 WebView ----------
@@ -153,6 +171,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, WKNavigationDelegate, WKUIDe
                 guard let self = self else { return }
                 if ok {
                     self.webview.load(URLRequest(url: URL(string: "http://127.0.0.1:\(backendPort)/")!))
+                    watchBackend()
                 } else {
                     self.loadErrorPage()
                 }
