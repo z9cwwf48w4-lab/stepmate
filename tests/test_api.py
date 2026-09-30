@@ -197,3 +197,27 @@ def test_plan_validation():
     c = TestClient(A.app)
     assert c.post("/api/plans", json={"goal": "", "steps": []}).status_code == 400
     assert c.post("/api/plans/x/status", json={"status": "bogus"}).status_code == 400
+
+
+def test_profile_roundtrip_and_injection(monkeypatch):
+    """用户档案：保存 → 读取 → 注入提示词。"""
+    import os, tempfile, json as J, app as A
+    d = tempfile.mkdtemp(prefix="smtest", dir=os.path.dirname(os.path.abspath(__file__)))
+    monkeypatch.setattr(A, "DATA_DIR", d)
+    monkeypatch.setattr(A, "PROFILE_FILE", os.path.join(d, "profile.json"))
+    from fastapi.testclient import TestClient
+    c = TestClient(A.app)
+    # 初始为空
+    assert c.get("/api/profile").json()["time"] == ""
+    # 保存
+    r = c.put("/api/profile", json={"time": "每天1小时", "budget": "零预算", "skills": "会Python", "notes": "学生"})
+    assert r.json()["ok"]
+    # 读取 + 截断保护（PUT 全量替换, 超长字段截到 500）
+    c.put("/api/profile", json={"time": "x" * 900, "budget": "零预算", "skills": "会Python", "notes": ""})
+    prof = c.get("/api/profile").json()
+    assert len(prof["time"]) == 500 and prof["budget"] == "零预算"
+    # 注入
+    brief = A._profile_brief()
+    assert "预算" in brief and "会Python" in brief
+    sysmsg = A._chat_system("目标", "步骤", "说明", None)
+    assert "真实情况" in sysmsg

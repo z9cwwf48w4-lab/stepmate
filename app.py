@@ -280,7 +280,8 @@ async def decompose(req: Request):
         "你是一个目标拆解教练。用户会给出一个目标或想做成的事。"
         "请把它拆解成清晰、可执行、由小到大的步骤树。"
         f"粒度要求：{LEVELS[level]}\n"
-        "只输出 JSON, 结构严格如下, 不要任何解释文字:\n"
+        + (f"用户的真实情况(计划必须贴合这些条件, 不要给脱离实际的建议): {_profile_brief()}\n" if _profile_brief() else "")
+        + "只输出 JSON, 结构严格如下, 不要任何解释文字:\n"
         '{"steps":[{"title":"步骤标题","detail":"这一步要做什么(1-2句)",'
         '"substeps":[{"title":"子步骤","detail":""}]}]}\n'
         "要求: 步骤要具体、可马上动手；没有子步骤时 substeps 为空数组。"
@@ -323,6 +324,11 @@ ACTION_PROMPT = (
 )
 
 
+def _profile_line() -> str:
+    b = _profile_brief()
+    return f"用户的真实情况(建议必须贴合, 不符合实际的建议没有价值): {b}\n" if b else ""
+
+
 def _chat_system(goal: str, step: str, step_detail: str, plan_context=None) -> str:
     return (
         "你是用户的『执行搭档』, 不是普通的建议机器人。"
@@ -331,7 +337,8 @@ def _chat_system(goal: str, step: str, step_detail: str, plan_context=None) -> s
         "而不是只说『你应该…』。\n"
         f"总目标: {goal}\n当前步骤: {step}\n步骤说明: {step_detail}\n"
         f"全局进度(供你参考, 不要重复念叨): {_plan_brief(plan_context) or '未知'}\n"
-        "原则: 1) 给可复制的成品; 2) 一次推进一小步; 3) 需要时主动追问关键前提;"
+        + _profile_line()
+        + "原则: 1) 给可复制的成品; 2) 一次推进一小步; 3) 需要时主动追问关键前提;"
         "4) 中文回复; 5) 若需要写代码/文本, 用代码块包裹方便复制。\n"
         + ACTION_PROMPT
     )
@@ -343,7 +350,8 @@ def _plan_system(goal: str, step: str, step_detail: str, plan_context=None) -> s
         "用户想质疑它是否合理、补充细节、敲定具体数字(预算/期限/数量)或调整做法。\n"
         f"总目标: {goal}\n当前步骤: {step}\n步骤说明: {step_detail}\n"
         f"全局进度(供你参考, 不要重复念叨): {_plan_brief(plan_context) or '未知'}\n"
-        "你的任务: 像靠谱的搭档一样和用户对话——指出这步可能的问题、给出建议的具体数值区间、帮用户想清楚。\n"
+        + _profile_line()
+        + "你的任务: 像靠谱的搭档一样和用户对话——指出这步可能的问题、给出建议的具体数值区间、帮用户想清楚。\n"
         "原则: 1) 中文; 2) 先确认用户真正想要什么, 再给建议; "
         "3) 涉及数字时给具体可执行的区间而非空话; 4) 用代码块包裹任何清单/公式; 5) 一次推进一小步。\n"
         + ACTION_PROMPT
@@ -433,11 +441,10 @@ async def refine(req: Request):
 # ---------- 计划存储（服务端持久化） ----------
 # 为什么不用 localStorage: 桌面 App 每次启动端口可能变化, 浏览器存储按"地址+端口"隔离,
 # 端口一换 localStorage 全部失效 -> 用户感觉"没有记忆"。服务端文件与端口无关。
-import threading as _th
-
 DATA_DIR = os.path.join(LOCAL_DIR, "data")
 STATE_FILE = os.path.join(DATA_DIR, "state.json")
-_state_lock = _th.Lock()
+PROFILE_FILE = os.path.join(DATA_DIR, "profile.json")
+_state_lock = threading.Lock()
 
 
 def _load_state() -> dict:
@@ -457,6 +464,44 @@ def _save_state(st: dict) -> None:
     with open(tmp, "w", encoding="utf-8") as f:
         json.dump(st, f, ensure_ascii=False)
     os.replace(tmp, STATE_FILE)
+
+
+# ---------- 用户真实情况档案（注入所有 AI 提示词，让建议贴合实际） ----------
+PROFILE_FIELDS = {"time": "每天可投入时间", "budget": "预算", "skills": "现有技能与资源", "notes": "其他情况"}
+
+
+def _load_profile() -> dict:
+    try:
+        with open(PROFILE_FILE, encoding="utf-8") as f:
+            p = json.load(f)
+        if isinstance(p, dict):
+            return {k: str(p.get(k) or "")[:500] for k in PROFILE_FIELDS}
+    except Exception:
+        pass
+    return {k: "" for k in PROFILE_FIELDS}
+
+
+def _profile_brief() -> str:
+    p = _load_profile()
+    parts = [f"{name}：{p[k]}" for k, name in PROFILE_FIELDS.items() if p[k]]
+    return "；".join(parts)
+
+
+@app.get("/api/profile")
+async def profile_get():
+    return _load_profile()
+
+
+@app.put("/api/profile")
+async def profile_put(req: Request):
+    body = await req.json()
+    p = {k: str(body.get(k) or "").strip()[:500] for k in PROFILE_FIELDS}
+    os.makedirs(DATA_DIR, exist_ok=True)
+    tmp = PROFILE_FILE + ".tmp"
+    with open(tmp, "w", encoding="utf-8") as f:
+        json.dump(p, f, ensure_ascii=False)
+    os.replace(tmp, PROFILE_FILE)
+    return {"ok": True, "profile": p}
 
 
 def _find_plan(st: dict, pid: str) -> Optional[dict]:
