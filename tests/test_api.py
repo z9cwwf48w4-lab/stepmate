@@ -140,3 +140,17 @@ def test_parse_json_fragment_never_becomes_step_list():
     broken = '{"steps": [ {"title": "a"},'
     out = parse_steps(broken)
     assert out["steps"] == []
+
+
+def test_plan_brief_summary():
+    from app import _plan_brief
+    pc = [{"title": "读书", "done": True}, {"title": "写笔记", "done": False}]
+    s = _plan_brief(pc)
+    assert "共 2 步, 已完成 1 步" in s
+    assert "读书" in s and "写笔记" in s
+
+
+def test_plan_brief_empty():
+    from app import _plan_brief
+    assert _plan_brief(None) == ""
+    assert _plan_brief([]) == ""

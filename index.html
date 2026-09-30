@@ -59,6 +59,30 @@
   .p-dice{border:1px dashed var(--line-strong);border-radius:var(--r-full);background:transparent;
     padding:4px 10px;font-size:var(--f-xs);color:var(--sub);cursor:pointer;font-family:inherit}
   .p-dice:hover{border-color:var(--accent);color:var(--accent-deep);background:var(--accent-soft)}
+  .retry-btn{border:1px solid var(--line-strong);border-radius:var(--r-full);background:var(--surface);
+    padding:2px 10px;font-size:11px;color:var(--accent-deep);cursor:pointer;margin-left:var(--s-1)}
+  .retry-btn:hover{border-color:var(--accent);background:var(--accent-soft)}
+  .proposal{margin:var(--s-2) var(--s-4) 0;padding:var(--s-3);border:1px dashed var(--line-strong);
+    border-radius:var(--r-2);background:var(--accent-soft)}
+  .p-head{font-size:var(--f-xs);color:var(--sub);margin-bottom:var(--s-1)}
+  .p-item{font-size:var(--f-sm);padding:2px 0}
+  .p-item .pd{color:var(--sub);font-size:var(--f-xs)}
+  .p-actions{display:flex;gap:var(--s-2);margin-top:var(--s-2)}
+  .p-ok,.p-no{height:30px;padding:0 var(--s-3);border-radius:var(--r-full);cursor:pointer;
+    font-size:var(--f-xs);border:1px solid var(--line-strong);background:var(--surface);color:var(--ink)}
+  .p-ok{background:var(--accent);border-color:var(--accent);color:#fff}
+  .p-ok:hover{background:var(--accent-deep)}
+  .p-no:hover{border-color:var(--sub);color:var(--sub)}
+  .p-ok:active,.p-no:active{transform:scale(.96)}
+  .act-bar{display:flex;flex-direction:column;gap:var(--s-1);margin-top:var(--s-2)}
+  .act-chip{display:flex;align-items:center;gap:var(--s-2);flex-wrap:wrap;font-size:var(--f-xs);
+    padding:var(--s-1) var(--s-2);border:1px dashed var(--line-strong);border-radius:var(--r-2);background:var(--surface)}
+  .act-chip.did{border-style:solid;border-color:var(--green);color:var(--green);background:var(--green-soft)}
+  .act-ok,.act-no{height:24px;padding:0 10px;border-radius:var(--r-full);cursor:pointer;font-size:11px;border:1px solid var(--line-strong)}
+  .act-ok{background:var(--accent);border-color:var(--accent);color:#fff}
+  .act-ok:hover{background:var(--accent-deep)}
+  .act-no{background:transparent;color:var(--sub)}
+  .act-no:hover{border-color:var(--sub)}
   /* ===== 设置区 ===== */
   .settings{display:flex;gap:var(--s-3);flex-wrap:wrap;align-items:center;margin-top:var(--s-4);
     font-size:var(--f-sm);color:var(--sub)}
@@ -193,6 +217,16 @@
     border-radius:var(--r-full);font-size:var(--f-sm);opacity:0;transition:opacity .25s;
     pointer-events:none;z-index:99;max-width:80vw;white-space:pre-wrap}
   .toast.show{opacity:.94}
+  .icon-btn.discuss-btn{background:var(--accent-soft);color:var(--accent-deep);border-color:var(--accent)}
+  .icon-btn.discuss-btn:hover{background:var(--accent);color:#fff}
+  .applybar{display:flex;align-items:center;gap:var(--s-3);padding:var(--s-2) var(--s-4);
+    border-top:1px solid var(--line);background:var(--accent-soft)}
+  .btn-apply{height:38px;padding:0 var(--s-4);border:none;border-radius:var(--r-full);
+    background:var(--accent);color:#fff;font-size:var(--f-sm);font-family:var(--hand);font-weight:700;
+    cursor:pointer;display:inline-flex;align-items:center;gap:var(--s-1);flex:none;transition:all var(--dur) var(--ease)}
+  .btn-apply:hover{background:var(--accent-deep)}
+  .btn-apply:disabled{opacity:.6;cursor:not-allowed}
+  .applybar .meta{font-size:var(--f-xs);color:var(--sub)}
   footer{text-align:center;margin-top:var(--s-8);color:var(--sub);font-size:var(--f-xs)}
 </style>
 </head>
@@ -264,6 +298,10 @@
 <div class="drawer" id="drawer">
   <div class="dh"><b id="dhTitle">和 AI 一起做</b><button class="x-btn" id="closeDrawer">收起</button></div>
   <div class="msgs" id="msgs"></div>
+  <div class="applybar" id="applybar" hidden>
+    <button class="btn-apply" id="applyDiscuss">✓ 按讨论更新此步</button>
+    <span class="meta">把上面的讨论变成这一步的正式内容</span>
+  </div>
   <div class="prompts" id="prompts"></div>
   <div class="inputbar">
     <textarea id="cm" placeholder="告诉 AI 这一步你想做出什么……（Enter 发送）"></textarea>
@@ -285,13 +323,14 @@ function toast(t){const el=$('#toast');el.textContent=t;el.classList.add('show')
 
 // ================= Provider 设置 =================
 const PRESETS = {
-  ollama:     {label:'Ollama 本地（免费）', base:'http://127.0.0.1:11434/v1', model:'qwen3:8b-16k', key:''},
-  deepseek:   {label:'DeepSeek',            base:'https://api.deepseek.com/v1', model:'deepseek-chat', key:''},
-  siliconflow:{label:'硅基流动',            base:'https://api.siliconflow.cn/v1', model:'deepseek-ai/DeepSeek-V3', key:''},
-  qwen:       {label:'通义千问',            base:'https://dashscope.aliyuncs.com/compatible-mode/v1', model:'qwen-plus', key:''},
-  zhipu:      {label:'智谱 GLM',            base:'https://open.bigmodel.cn/api/paas/v4', model:'glm-4-flash', key:''},
-  openrouter: {label:'OpenRouter',          base:'https://openrouter.ai/api/v1', model:'openai/gpt-4o-mini', key:''},
-  custom:     {label:'自定义接口…',          base:'', model:'', key:''},
+  ollama: {label:'Ollama 本地（免费·无需钥匙）', base:'http://127.0.0.1:11434/v1', model:'qwen3:8b-16k', key:''},
+  localgw: {label:'本地 AI 网关（免费·智谱/OpenRouter/Cerebras）', base:'http://127.0.0.1:4001/v1', model:'glm-4-flash', key:''},
+  zhipu: {label:'智谱 GLM（直连）', base:'https://open.bigmodel.cn/api/paas/v4', model:'glm-4-flash', key:''},
+  openrouter: {label:'OpenRouter（直连）', base:'https://openrouter.ai/api/v1', model:'openai/gpt-4o-mini', key:''},
+  deepseek: {label:'DeepSeek（直连·余额0⚠️）', base:'https://api.deepseek.com/v1', model:'deepseek-chat', key:''},
+  siliconflow: {label:'硅基流动', base:'https://api.siliconflow.cn/v1', model:'deepseek-ai/DeepSeek-V3', key:''},
+  qwen: {label:'通义千问', base:'https://dashscope.aliyuncs.com/compatible-mode/v1', model:'qwen-plus', key:''},
+  custom: {label:'自定义接口…', base:'', model:'', key:''},
 };
 let presetId = localStorage.getItem('sm_preset') || 'ollama';
 if(!PRESETS[presetId]) presetId='ollama';
@@ -319,12 +358,30 @@ $('#preset').addEventListener('change', e=>{presetId=e.target.value; applyPreset
 ['#pmodel','#pkey','#pbase'].forEach(s=>$(s).addEventListener('change', saveProvider));
 applyPreset();
 
+// 本地预设覆盖: API Key 存在后端 presets.local.json(不进 git), 启动时合并进来
+fetch('/api/presets').then(r=>r.json()).then(loc=>{
+  let changed=false;
+  for(const k in loc){
+    if(PRESETS[k] && (loc[k].key || loc[k].base || loc[k].model || loc[k].label)){
+      PRESETS[k]=Object.assign({}, PRESETS[k], loc[k]); changed=true;
+    }else if(!PRESETS[k]){
+      PRESETS[k]=loc[k]; changed=true;
+    }
+  }
+  if(changed){
+    $('#preset').innerHTML=Object.entries(PRESETS).map(([k,v])=>`<option value="${k}">${v.label}</option>`).join('');
+    if(!PRESETS[presetId]) presetId='ollama';
+    $('#preset').value=presetId;
+    applyPreset();
+  }
+}).catch(()=>{});
+
 // ================= 粒度滑杆 =================
 const LEVEL_NAMES = {1:'随便拆拆',2:'大致方向',3:'适中',4:'比较细',5:'精确到天'};
 $('#level').addEventListener('input', e=>$('#levelName').textContent = LEVEL_NAMES[e.target.value]);
 
 // ================= 持久化 =================
-let goalText='', stepsData=[], curStep=null, curDetail='', curStepKey='';
+let goalText='', stepsData=[], curStep=null, curDetail='', curStepKey='', curMode='exec', curRef=null;
 const PLAN_KEY='sm_plan_v2';
 const chatKey = k => 'sm_chat_' + btoa(unescape(encodeURIComponent(k))).replace(/=/g,'');
 function savePlan(){
@@ -366,14 +423,24 @@ const PROMPT_TPL=[
  '「{s}」有没有现成模板或工具可以直接用？',
  '帮我预演一遍做「{s}」时最容易犯的错'];
 let promptPicks=[];
-function renderPrompts(){
-  promptPicks=shuffle(PROMPT_TPL).slice(0,3);
+const PROMPT_TPL_DISCUSS=[
+ '「{s}」这步是不是必要？有没有更省力的替代',
+ '「{s}」具体要做到什么程度？帮我定个可验收的标准',
+ '「{s}」大概要花多少钱/多少时间？给个区间',
+ '「{s}」顺序对吗？是不是该先做另一件事',
+ '「{s}」能不能再拆细一点，给我 2-3 个具体动作',
+ '如果我只有很有限的预算，「{s}」怎么调整',
+ '「{s}」最容易在哪儿踩坑？怎么避',
+ '帮我把「{s}」的产出验收标准写清楚'];
+function renderPrompts(mode){
+  const pool = mode==='discuss'?PROMPT_TPL_DISCUSS:PROMPT_TPL;
+  promptPicks=shuffle(pool).slice(0,3);
   const short=curStep.length>9?curStep.slice(0,9)+'…':curStep;
   $('#prompts').innerHTML=promptPicks.map((t,i)=>`<button class="chip p-chip" data-i="${i}">${esc(t.replace('{s}',short))}</button>`).join('')
     +'<button class="p-dice" id="pdice" title="换一批">🎲</button>';
 }
 $('#prompts').addEventListener('click',e=>{
-  if(e.target.id==='pdice'){renderPrompts();return;}
+  if(e.target.id==='pdice'){renderPrompts(curMode);return;}
   const c=e.target.closest('.p-chip'); if(!c)return;
   $('#cm').value=promptPicks[+c.dataset.i].replace('{s}',curStep);
   $('#cm').focus();
@@ -408,6 +475,7 @@ const ICONS = {
   wand:'<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.05" stroke-linecap="round" stroke-linejoin="round"><path d="M15 4V2"/><path d="M15 16v-2"/><path d="M8 9h2"/><path d="M20 9h2"/><path d="M17.8 11.8 19 13"/><path d="M17.8 6.2 19 5"/><path d="m3 21 9-9"/><path d="M12.2 6.2 11 5"/></svg>',
   edit:'<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.05" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>',
   del:'<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.05" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg>',
+  discuss:'<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.05" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/><path d="M8 9h8"/><path d="M8 13h5"/></svg>',
   up:'<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.05" stroke-linecap="round" stroke-linejoin="round"><path d="m18 15-6-6-6 6"/></svg>',
   down:'<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.05" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>',
 };
@@ -437,6 +505,7 @@ function stepEl(s,i){
         ${s.detail?`<div class="d">${esc(s.detail)}</div>`:''}
       </div>
       <div class="acts">
+        <button class="icon-btn discuss-btn" title="和 AI 讨论/质疑这一步">${ICONS.discuss}</button>
         <button class="icon-btn chat-btn" title="和 AI 一起做">${ICONS.chat}</button>
         <button class="icon-btn wand-btn" title="AI 再拆细一点">${ICONS.wand}</button>
         <button class="icon-btn edit-btn" title="重命名">${ICONS.edit}</button>
@@ -450,7 +519,7 @@ function stepEl(s,i){
     s.substeps.forEach((ss,j)=>{
       const sub=document.createElement('div'); sub.className='sub';
       sub.innerHTML=`<span class="dot"></span><div><div class="st">${i+1}.${j+1} ${esc(ss.title)}</div>${ss.detail?`<div class="sd">${esc(ss.detail)}</div>`:''}</div>`;
-      sub.addEventListener('click',ev=>{ev.stopPropagation();openChat(`${i+1}.${j+1} ${ss.title}`,ss.detail||'',`${keyOf(s)}::${j}`);});
+      sub.addEventListener('click',ev=>{ev.stopPropagation();openChat(`${i+1}.${j+1} ${ss.title}`,ss.detail||'',`${keyOf(s)}::${j}`,'discuss',{i,j});});
       subwrap.appendChild(sub);
     });
     el.appendChild(subwrap);
@@ -458,6 +527,7 @@ function stepEl(s,i){
   el.querySelector('.n-badge').addEventListener('click',()=>{
     doneSet.has(keyOf(s))?doneSet.delete(keyOf(s)):doneSet.add(keyOf(s)); saveDone(); renderTree();
   });
+  el.querySelector('.discuss-btn').addEventListener('click',()=>openChat(`${i+1}. ${s.title}`,s.detail||'',keyOf(s),'discuss',{i,j:null}));
   el.querySelector('.chat-btn').addEventListener('click',()=>openChat(`${i+1}. ${s.title}`,s.detail||'',keyOf(s)));
   el.querySelector('.wand-btn').addEventListener('click',ev=>resplit(ev.currentTarget,s));
   el.querySelector('.edit-btn').addEventListener('click',()=>inlineEdit(el,s));
@@ -503,9 +573,21 @@ async function resplit(btn,s){
         provider:currentProvider()})});
     const d=await r.json();
     if(!r.ok) throw new Error(d.error||'失败');
-    s.substeps=d.steps.slice(0,4).map(x=>({title:x.title,detail:x.detail||''}));
-    savePlan(); renderTree();
-    toast('已拆细，点标题展开查看');
+    const props=d.steps.slice(0,4).map(x=>({title:x.title,detail:x.detail||''}));
+    // Cline 式：先展示提案，用户确认才应用
+    const host=btn.closest('.step');
+    const old=host.querySelector('.proposal'); if(old)old.remove();
+    const box=document.createElement('div'); box.className='proposal';
+    box.innerHTML=`<div class="p-head">AI 建议把「${esc(s.title)}」拆成：</div>`
+      +props.map(p=>`<div class="p-item">${esc(p.title)}${p.detail?`<span class="pd"> — ${esc(p.detail)}</span>`:''}</div>`).join('')
+      +`<div class="p-actions"><button class="p-ok">✓ 应用</button><button class="p-no">✕ 取消</button></div>`;
+    box.querySelector('.p-ok').addEventListener('click',()=>{
+      s.substeps=props.map(p=>({title:p.title,detail:p.detail}));
+      savePlan(); renderTree(); toast('✓ 已应用 AI 拆分');
+    });
+    box.querySelector('.p-no').addEventListener('click',()=>box.remove());
+    host.appendChild(box);
+    box.scrollIntoView({behavior:'smooth',block:'nearest'});
   }catch(err){ toast('⚠️ '+err.message); }
   finally{ btn.disabled=false; }
 }
@@ -513,20 +595,25 @@ async function resplit(btn,s){
 // ================= 聊天（流式 + 历史持久化） =================
 $('#closeDrawer').addEventListener('click',()=>$('#drawer').classList.remove('show'));
 $('#send').addEventListener('click',sendMsg);
+$('#applyDiscuss').addEventListener('click',applyDiscuss);
 $('#cm').addEventListener('keydown',e=>{if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();sendMsg();}});
 
-function openChat(title,detail,key){
-  curStep=title; curDetail=detail; curStepKey=key||title;
-  $('#dhTitle').textContent='和 AI 一起做：'+title;
+function openChat(title,detail,key,mode='exec',ref=null){
+  curStep=title; curDetail=detail; curMode=mode; curRef=ref;
+  curStepKey=(key||title)+(mode==='discuss'?'::discuss':'');
+  $('#dhTitle').textContent=(mode==='discuss'?'讨论这一步：':'和 AI 一起做：')+title;
+  $('#applybar').hidden = mode!=='discuss';
   const msgs=$('#msgs'); msgs.innerHTML='';
   const saved=JSON.parse(localStorage.getItem(chatKey(curStepKey))||'[]');
   if(saved.length===0){
-    addMsg('a',`聚焦这一步：「${title}」\n想先做出点什么？草稿、清单、话术、计划，直接说，我来产出。`);
+    addMsg('a', mode==='discuss'
+      ? `关于这一步「${title}」，哪里拿不准、想改、想质疑，直接说。\n比如：预算定多少、顺序对不对、要不要拆开、验收标准是什么。聊清楚后点下方「✓ 按讨论更新此步」。`
+      : `聚焦这一步：「${title}」\n想先做出点什么？草稿、清单、话术、计划，直接说，我来产出。`);
   }else{
     saved.forEach(m=>addMsg(m.role==='user'?'u':'a', m.role==='user'?esc(m.content):mdRender(m.content)));
     toast('已恢复上次的对话记录');
   }
-  renderPrompts();
+  renderPrompts(curMode);
   $('#drawer').classList.add('show');
 }
 function getHistory(){
@@ -534,50 +621,137 @@ function getHistory(){
 }
 async function sendMsg(){
   const txt=$('#cm').value.trim(); if(!txt)return;
+  $('#cm').value='';
   addMsg('u',esc(txt));
   const hist=getHistory(); hist.push({role:'user',content:txt});
   localStorage.setItem(chatKey(curStepKey),JSON.stringify(hist));
-  $('#cm').value='';
   const bubble=addMsg('a','<span class="spin"></span>');
   bubble.classList.add('streaming');
-  try{
-    const r=await fetch('/api/chat/stream',{method:'POST',headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({goal:goalText,step:curStep,step_detail:curDetail,message:txt,
-        history:hist.slice(0,-1),provider:currentProvider()})});
-    if(!r.ok){ const d=await r.json(); throw new Error(d.error||'失败'); }
-    const reader=r.body.getReader();
-    const dec=new TextDecoder();
-    let buf='', full='';
-    while(true){
-      const {done,value}=await reader.read();
-      if(done)break;
-      buf+=dec.decode(value,{stream:true});
-      const lines=buf.split('\n'); buf=lines.pop();
-      for(const line of lines){
-        if(!line.startsWith('data:'))continue;
-        const payload=line.slice(5).trim();
-        if(payload==='[DONE]')continue;
-        try{
-          const j=JSON.parse(payload);
-          if(j.error) throw new Error(j.error);
-          if(j.t){ full+=j.t; bubble.innerHTML=esc(full).replace(/\n/g,'<br');
-            $('#msgs').scrollTop=$('#msgs').scrollHeight; }
-        }catch(e){ if(e.message&&!e.message.includes('JSON')) throw e; }
-      }
+  await streamWithRetry(txt,bubble);
+  $('#msgs').scrollTop=$('#msgs').scrollHeight;
+}
+function planBrief(){
+  if(!stepsData.length)return null;
+  return stepsData.map(s=>({title:s.title,done:doneSet.has(keyOf(s))}));
+}
+async function streamOnce(txt,bubble){
+  const hist=getHistory();
+  let full='';
+  const r=await fetch('/api/chat/stream',{method:'POST',headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({goal:goalText,step:curStep,step_detail:curDetail,message:txt,
+      mode:curMode,history:hist.slice(0,-1),plan_context:planBrief(),provider:currentProvider()})});
+  if(!r.ok){ const d=await r.json().catch(()=>({})); throw new Error(d.error||'失败'); }
+  const reader=r.body.getReader();
+  const dec=new TextDecoder();
+  let buf='';
+  while(true){
+    const {done,value}=await reader.read();
+    if(done)break;
+    buf+=dec.decode(value,{stream:true});
+    const lines=buf.split('\n'); buf=lines.pop();
+    for(const line of lines){
+      if(!line.startsWith('data:'))continue;
+      const payload=line.slice(5).trim();
+      if(payload==='[DONE]')continue;
+      try{
+        const j=JSON.parse(payload);
+        if(j.error) throw new Error(j.error);
+        if(j.t){ full+=j.t; bubble.innerHTML=esc(full).replace(/\n/g,'<br');
+          $('#msgs').scrollTop=$('#msgs').scrollHeight; }
+      }catch(e){ if(e.message&&!e.message.includes('JSON')) throw e; }
     }
-    bubble.classList.remove('streaming');
-    bubble.innerHTML=mdRender(full);
-    hist.push({role:'assistant',content:full});
-    localStorage.setItem(chatKey(curStepKey),JSON.stringify(hist));
-  }catch(err){
-    bubble.classList.remove('streaming');
-    bubble.textContent='⚠️ '+err.message;
   }
+  bubble.classList.remove('streaming');
+  const {text,actions}=parseActions(full);
+  bubble.innerHTML=mdRender(text);
+  if(actions.length) attachActions(bubble,actions);
+  const hist2=getHistory(); hist2.push({role:'assistant',content:text});
+  localStorage.setItem(chatKey(curStepKey),JSON.stringify(hist2));
+}
+function parseActions(full){
+  const actions=[]; let m;
+  const re=/^\s*\[ACTION\]\s*(\w+)\s*\|(.+)$/gm;
+  while((m=re.exec(full))){
+    const parts=m[2].split('|').map(x=>x.trim());
+    if(m[1]==='mark_done'&&parts[0]) actions.push({type:'mark_done',title:parts[0]});
+    if(m[1]==='add_step'&&parts[0]) actions.push({type:'add_step',title:parts[0],detail:parts[1]||''});
+  }
+  const text=full.replace(/^\s*\[ACTION\][^\n]*$/gm,'').trim();
+  return {text,actions};
+}
+function attachActions(bubble,actions){
+  const bar=document.createElement('div'); bar.className='act-bar';
+  actions.forEach(a=>{
+    const chip=document.createElement('span'); chip.className='act-chip';
+    if(a.type==='mark_done'){
+      chip.innerHTML=`🤖 想帮你标记完成「${esc(a.title)}」 <button class="act-ok">应用</button><button class="act-no">忽略</button>`;
+      chip.querySelector('.act-ok').addEventListener('click',()=>{
+        const s=stepsData.find(x=>x.title.includes(a.title)||a.title.includes(x.title));
+        if(!s){ toast('没在计划里找到这一步'); return; }
+        doneSet.add(keyOf(s)); saveDone(); renderTree();
+        chip.innerHTML=`✓ 已标记完成「${esc(s.title)}」`; chip.classList.add('did');
+      });
+    }else{
+      chip.innerHTML=`🤖 想帮你加一步「${esc(a.title)}」 <button class="act-ok">应用</button><button class="act-no">忽略</button>`;
+      chip.querySelector('.act-ok').addEventListener('click',()=>{
+        stepsData.push({title:a.title,detail:a.detail,substeps:[]});
+        savePlan(); renderTree();
+        chip.innerHTML=`✓ 已添加步骤「${esc(a.title)}」`; chip.classList.add('did');
+      });
+    }
+    chip.querySelector('.act-no').addEventListener('click',()=>chip.remove());
+    bar.appendChild(chip);
+  });
+  bubble.appendChild(bar); $('#msgs').scrollTop=$('#msgs').scrollHeight;
+}
+async function streamWithRetry(txt,bubble){
+  try{
+    await streamOnce(txt,bubble);                    // 第一次尝试
+  }catch(err){
+    // 自愈：如果 AI 一个字都还没吐出来（多半是网络/接口抖动），自动静默重试一次
+    try{
+      await streamOnce(txt,bubble);
+      toast('已自动重试成功');
+    }catch(err2){
+      showChatErr(bubble,err2.message||err.message,txt);
+    }
+  }
+}
+function showChatErr(bubble,msg,txt){
+  bubble.classList.remove('streaming');
+  bubble.innerHTML=`⚠️ ${esc(msg)} <button class="retry-btn">↻ 重试</button>`;
+  bubble.querySelector('.retry-btn').addEventListener('click',()=>{
+    const nb=addMsg('a','<span class="spin"></span>'); nb.classList.add('streaming');
+    bubble.remove();
+    streamWithRetry(txt,nb);
+  });
   $('#msgs').scrollTop=$('#msgs').scrollHeight;
 }
 function addMsg(role,html){
   const m=document.createElement('div');m.className='m '+role;m.innerHTML=html;
   $('#msgs').appendChild(m);$('#msgs').scrollTop=$('#msgs').scrollHeight;return m;
+}
+async function applyDiscuss(){
+  if(curMode!=='discuss'||!curRef)return;
+  const btn=$('#applyDiscuss'); btn.disabled=true; const old=btn.textContent; btn.textContent='更新中…';
+  try{
+    const hist=JSON.parse(localStorage.getItem(chatKey(curStepKey))||'[]');
+    if(hist.length===0){ toast('先和 AI 讨论几句再更新'); btn.disabled=false; btn.textContent=old; return; }
+    const r=await fetch('/api/refine',{method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({step:curStep,history:hist,provider:currentProvider()})});
+    const d=await r.json();
+    if(!r.ok) throw new Error(d.error||'失败');
+    if(curRef.j===null){
+      stepsData[curRef.i]={title:d.title,detail:d.detail||'',substeps:d.substeps||[]};
+    }else{
+      const ss=stepsData[curRef.i].substeps;
+      if(ss&&ss[curRef.j]) ss[curRef.j]={title:d.title,detail:d.detail||'',substeps:[]};
+    }
+    savePlan(); renderTree();
+    toast('✓ 已按讨论更新这一步');
+    $('#drawer').classList.remove('show');
+  }catch(err){ toast('⚠️ '+err.message); }
+  finally{ btn.disabled=false; btn.textContent=old; }
 }
 
 // ================= Markdown 渲染 =================

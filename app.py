@@ -103,6 +103,14 @@ def _status_hint(cfg: dict, code: int, body: str) -> str:
     return f"AI 服务返回 {code}：{body[:160]}"
 
 
+def _clean(text: str) -> str:
+    """去掉 Qwen3 / DeepSeek 等模型的 <think>…</think> 推理块，避免污染 JSON 解析。"""
+    text = re.sub(r"<think>[\s\S]*?</think>", "", text, flags=re.IGNORECASE)
+    text = re.sub(r"<think\s*>?", "", text, flags=re.IGNORECASE)
+    text = re.sub(r"</think\s*>?", "", text, flags=re.IGNORECASE)
+    return text.strip()
+
+
 async def _call_provider(cfg: dict, system: str, user: str, history: Optional[list] = None) -> str:
     messages = [{"role": "system", "content": system}]
     if history:
@@ -116,7 +124,7 @@ async def _call_provider(cfg: dict, system: str, user: str, history: Optional[li
                 headers=_headers(cfg),
             )
             r.raise_for_status()
-            return r.json()["choices"][0]["message"]["content"]
+            return _clean(r.json()["choices"][0]["message"]["content"])
     except httpx.ConnectError:
         raise RuntimeError(await _conn_hint(cfg))
     except httpx.HTTPStatusError as e:
@@ -148,7 +156,9 @@ async def _stream_provider(cfg: dict, system: str, user: str, history: Optional[
                     try:
                         delta = json.loads(data)["choices"][0].get("delta", {}).get("content")
                         if delta:
-                            yield "data: " + json.dumps({"t": delta}, ensure_ascii=False) + "\n\n"
+                            delta = _clean(delta)
+                            if delta:
+                                yield "data: " + json.dumps({"t": delta}, ensure_ascii=False) + "\n\n"
                     except Exception:
                         continue
     except httpx.ConnectError:
@@ -237,6 +247,21 @@ async def healthz():
     return {"ok": True, "app": "stepmate"}
 
 
+PRESETS_LOCAL = os.path.join(LOCAL_DIR, "presets.local.json")
+
+
+@app.get("/api/presets")
+async def presets_local():
+    """本地接口预设覆盖（含个人 API Key）。该文件不进 git，密钥只留在本机。"""
+    if os.path.exists(PRESETS_LOCAL):
+        try:
+            with open(PRESETS_LOCAL, encoding="utf-8") as f:
+                return json.load(f)
+        except Exception:
+            pass
+    return {}
+
+
 @app.post("/api/decompose")
 async def decompose(req: Request):
     body = await req.json()
@@ -274,15 +299,66 @@ async def decompose(req: Request):
         return JSONResponse({"error": f"AI 调用失败: {e}"}, status_code=500)
 
 
-def _chat_system(goal: str, step: str, step_detail: str) -> str:
+def _plan_brief(plan_context) -> str:
+    """把全局计划进度压成一段话, 让 AI 每次开口都知道用户干到哪了。"""
+    if not plan_context or not isinstance(plan_context, list):
+        return ""
+    done = [p.get("title", "") for p in plan_context if p.get("done")]
+    todo = [p.get("title", "") for p in plan_context if not p.get("done")]
+    parts = [f"共 {len(plan_context)} 步, 已完成 {len(done)} 步。"]
+    if done:
+        parts.append("已完成: " + "、".join(done) + "。")
+    if todo:
+        parts.append("待做: " + "、".join(todo) + "。")
+    return "".join(parts)
+
+
+ACTION_PROMPT = (
+    "工具能力: 若用户表达了想让你替他执行操作的意图(如『做完了』『帮我加一步』), "
+    "你可以在回复最末尾另起一行输出动作指令, 每行一条, 最多 2 条, 格式严格如下:\n"
+    "[ACTION] mark_done | 步骤标题\n"
+    "[ACTION] add_step | 步骤标题 | 一句说明\n"
+    "注意: 标题必须与全局进度里出现的步骤名一致; 界面会先弹确认按钮, 用户确认后才执行; "
+    "不要对无关话题滥用动作; 除以上两种外没有其他动作。"
+)
+
+
+def _chat_system(goal: str, step: str, step_detail: str, plan_context=None) -> str:
     return (
         "你是用户的『执行搭档』, 不是普通的建议机器人。"
         "你们正在一起完成一个目标, 当前聚焦于下面这个具体步骤。"
         "你的任务: 直接产出用户能拿去用的东西——草稿、清单、话术、代码片段、邮件、检索式、行动计划等,"
         "而不是只说『你应该…』。\n"
         f"总目标: {goal}\n当前步骤: {step}\n步骤说明: {step_detail}\n"
+        f"全局进度(供你参考, 不要重复念叨): {_plan_brief(plan_context) or '未知'}\n"
         "原则: 1) 给可复制的成品; 2) 一次推进一小步; 3) 需要时主动追问关键前提;"
-        "4) 中文回复; 5) 若需要写代码/文本, 用代码块包裹方便复制。"
+        "4) 中文回复; 5) 若需要写代码/文本, 用代码块包裹方便复制。\n"
+        + ACTION_PROMPT
+    )
+
+
+def _plan_system(goal: str, step: str, step_detail: str, plan_context=None) -> str:
+    return (
+        "你是用户的『规划搭档』, 不是执行者。你们正在讨论一个目标下的某一步骤,"
+        "用户想质疑它是否合理、补充细节、敲定具体数字(预算/期限/数量)或调整做法。\n"
+        f"总目标: {goal}\n当前步骤: {step}\n步骤说明: {step_detail}\n"
+        f"全局进度(供你参考, 不要重复念叨): {_plan_brief(plan_context) or '未知'}\n"
+        "你的任务: 像靠谱的搭档一样和用户对话——指出这步可能的问题、给出建议的具体数值区间、帮用户想清楚。\n"
+        "原则: 1) 中文; 2) 先确认用户真正想要什么, 再给建议; "
+        "3) 涉及数字时给具体可执行的区间而非空话; 4) 用代码块包裹任何清单/公式; 5) 一次推进一小步。\n"
+        + ACTION_PROMPT
+    )
+
+
+def _refine_system(step_title: str) -> str:
+    return (
+        "你是用户的『规划搭档』。下面是你和用户对某一步骤的讨论记录。请综合讨论,"
+        "产出『修订后』的这一步。\n"
+        f"要修订的步骤原标题: {step_title}\n"
+        "只输出 JSON, 结构严格如下, 不要任何解释文字:\n"
+        '{"steps":[{"title":"<这里写修订后的真实步骤标题, 可沿用原标题或改写>","detail":"<修订后的说明, 1-3句, 必须包含讨论中敲定的具体数字/预算/期限/条件>","substeps":[{"title":"<子步骤>","detail":""}]}]}\n'
+        "注意: 尖括号里是占位示例, 必须替换成真实内容, 不要原样输出占位文字;"
+        "保留可操作性; 没有子步骤时 substeps 为空数组。"
     )
 
 
@@ -296,7 +372,9 @@ async def chat(req: Request):
     cfg = body.get("provider") or {}
     if not cfg.get("base") or not cfg.get("model"):
         return JSONResponse({"error": "请先在设置里选 AI 接口"}, status_code=400)
-    system = _chat_system(body.get("goal", ""), step, body.get("step_detail", ""))
+    mode = body.get("mode", "exec")
+    pc = body.get("plan_context")
+    system = _plan_system(body.get("goal", ""), step, body.get("step_detail", ""), pc) if mode == "discuss" else _chat_system(body.get("goal", ""), step, body.get("step_detail", ""), pc)
     try:
         reply = await _call_provider(cfg, system, user_msg, history=body.get("history") or [])
         return {"reply": reply}
@@ -314,7 +392,9 @@ async def chat_stream(req: Request):
     cfg = body.get("provider") or {}
     if not step or not user_msg or not cfg.get("base") or not cfg.get("model"):
         return JSONResponse({"error": "缺少参数或 AI 接口配置"}, status_code=400)
-    system = _chat_system(body.get("goal", ""), step, body.get("step_detail", ""))
+    mode = body.get("mode", "exec")
+    pc = body.get("plan_context")
+    system = _plan_system(body.get("goal", ""), step, body.get("step_detail", ""), pc) if mode == "discuss" else _chat_system(body.get("goal", ""), step, body.get("step_detail", ""), pc)
 
     async def gen():
         async for chunk in _stream_provider(cfg, system, user_msg, history=body.get("history") or []):
@@ -322,6 +402,32 @@ async def chat_stream(req: Request):
 
     return StreamingResponse(gen(), media_type="text/event-stream",
                              headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"})
+
+
+@app.post("/api/refine")
+async def refine(req: Request):
+    """根据与用户的讨论记录，产出修订后的某一步（标题/说明/子步骤）。"""
+    body = await req.json()
+    step = (body.get("step") or "").strip()
+    if not step:
+        return JSONResponse({"error": "缺少步骤"}, status_code=400)
+    cfg = body.get("provider") or {}
+    if not cfg.get("base") or not cfg.get("model"):
+        return JSONResponse({"error": "请先在设置里选 AI 接口"}, status_code=400)
+    history = body.get("history") or []
+    system = _refine_system(step)
+    user_msg = "根据以上讨论，请给出修订后的这一步（只输出 JSON）。"
+    try:
+        text = await _call_provider(cfg, system, user_msg, history=history)
+        data = parse_steps(text)
+        if not data["steps"]:
+            return JSONResponse({"error": "AI 没能产出修订结果，换个说法再试"}, status_code=502)
+        s = data["steps"][0]
+        return {"title": s["title"], "detail": s["detail"], "substeps": s["substeps"]}
+    except RuntimeError as e:
+        return JSONResponse({"error": str(e)}, status_code=400)
+    except Exception as e:
+        return JSONResponse({"error": f"AI 调用失败: {e}"}, status_code=500)
 
 
 @app.get("/", response_class=HTMLResponse)
