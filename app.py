@@ -430,6 +430,135 @@ async def refine(req: Request):
         return JSONResponse({"error": f"AI 调用失败: {e}"}, status_code=500)
 
 
+# ---------- 计划存储（服务端持久化） ----------
+# 为什么不用 localStorage: 桌面 App 每次启动端口可能变化, 浏览器存储按"地址+端口"隔离,
+# 端口一换 localStorage 全部失效 -> 用户感觉"没有记忆"。服务端文件与端口无关。
+import threading as _th
+
+DATA_DIR = os.path.join(LOCAL_DIR, "data")
+STATE_FILE = os.path.join(DATA_DIR, "state.json")
+_state_lock = _th.Lock()
+
+
+def _load_state() -> dict:
+    try:
+        with open(STATE_FILE, encoding="utf-8") as f:
+            st = json.load(f)
+        if isinstance(st, dict) and isinstance(st.get("plans"), list):
+            return st
+    except Exception:
+        pass
+    return {"plans": []}
+
+
+def _save_state(st: dict) -> None:
+    os.makedirs(DATA_DIR, exist_ok=True)
+    tmp = STATE_FILE + ".tmp"
+    with open(tmp, "w", encoding="utf-8") as f:
+        json.dump(st, f, ensure_ascii=False)
+    os.replace(tmp, STATE_FILE)
+
+
+def _find_plan(st: dict, pid: str) -> Optional[dict]:
+    return next((x for x in st["plans"] if x.get("id") == pid), None)
+
+
+def _plan_summary(p: dict) -> dict:
+    steps = p.get("steps") or []
+    done = set(p.get("done") or [])
+    n_done = sum(1 for s in steps if s.get("title") in done)
+    return {
+        "id": p["id"], "goal": p.get("goal", ""), "status": p.get("status", "active"),
+        "createdAt": p.get("createdAt"), "updatedAt": p.get("updatedAt"),
+        "steps": len(steps), "done": n_done, "chats": len(p.get("chats") or {}),
+    }
+
+
+@app.get("/api/plans")
+async def plans_list():
+    """计划列表（摘要，按更新时间倒序）。"""
+    with _state_lock:
+        st = _load_state()
+    sums = [_plan_summary(p) for p in st["plans"]]
+    sums.sort(key=lambda x: x.get("updatedAt") or 0, reverse=True)
+    return {"plans": sums}
+
+
+@app.post("/api/plans")
+async def plans_upsert(req: Request):
+    """创建或更新一份完整计划（含步骤、聊天记录、完成状态）。"""
+    body = await req.json()
+    goal = (body.get("goal") or "").strip()
+    steps = body.get("steps")
+    if not goal or not isinstance(steps, list):
+        return JSONResponse({"error": "goal 和 steps 不能为空"}, status_code=400)
+    now = int(time.time())
+    with _state_lock:
+        st = _load_state()
+        pid = body.get("id")
+        p = _find_plan(st, pid) if pid else None
+        if p is None:
+            pid = uuid.uuid4().hex[:12]
+            p = {"id": pid, "createdAt": now}
+            st["plans"].append(p)
+        p.update({
+            "goal": goal[:200],
+            "steps": steps[:60],
+            # 部分更新时缺省字段保留原值，避免误清聊天/完成记录
+            "chats": body["chats"] if isinstance(body.get("chats"), dict) else p.get("chats", {}),
+            "done": body["done"] if isinstance(body.get("done"), list) else p.get("done", []),
+            "status": body.get("status") or p.get("status") or "active",
+            "updatedAt": now,
+        })
+        # 容量保护：最多 50 份，超出先删最旧的归档件
+        if len(st["plans"]) > 50:
+            st["plans"].sort(key=lambda x: (x.get("status") != "archived", -(x.get("updatedAt") or 0)))
+            del st["plans"][50:]
+        _save_state(st)
+    return {"id": pid, "updatedAt": now}
+
+
+@app.get("/api/plans/{pid}")
+async def plans_get(pid: str):
+    with _state_lock:
+        st = _load_state()
+    p = _find_plan(st, pid)
+    if not p:
+        return JSONResponse({"error": "计划不存在"}, status_code=404)
+    return p
+
+
+@app.post("/api/plans/{pid}/status")
+async def plans_status(pid: str, req: Request):
+    """归档 / 恢复（status: active | archived）。"""
+    body = await req.json()
+    status = body.get("status")
+    if status not in ("active", "archived"):
+        return JSONResponse({"error": "status 必须是 active 或 archived"}, status_code=400)
+    now = int(time.time())
+    with _state_lock:
+        st = _load_state()
+        p = _find_plan(st, pid)
+        if not p:
+            return JSONResponse({"error": "计划不存在"}, status_code=404)
+        p["status"] = status
+        p["updatedAt"] = now
+        _save_state(st)
+    return {"ok": True}
+
+
+@app.delete("/api/plans/{pid}")
+async def plans_delete(pid: str):
+    with _state_lock:
+        st = _load_state()
+        before = len(st["plans"])
+        st["plans"] = [x for x in st["plans"] if x.get("id") != pid]
+        if len(st["plans"]) == before:
+            return JSONResponse({"error": "计划不存在"}, status_code=404)
+        _save_state(st)
+    return {"ok": True}
+
+
 @app.get("/", response_class=HTMLResponse)
 async def index():
     with open(os.path.join(LOCAL_DIR, "index.html"), encoding="utf-8") as f:

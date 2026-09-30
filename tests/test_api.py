@@ -154,3 +154,46 @@ def test_plan_brief_empty():
     from app import _plan_brief
     assert _plan_brief(None) == ""
     assert _plan_brief([]) == ""
+
+
+def test_plan_crud_and_archive(monkeypatch):
+    """计划存储：创建 → 列表 → 归档 → 删除 全链路（不依赖 AI）。"""
+    import os, tempfile, app as A
+    d = tempfile.mkdtemp(prefix="smtest", dir=os.path.dirname(os.path.abspath(__file__)))
+    monkeypatch.setattr(A, "STATE_FILE", os.path.join(d, "state.json"))
+    monkeypatch.setattr(A, "DATA_DIR", d)
+    from fastapi.testclient import TestClient
+    c = TestClient(A.app)
+
+    # 创建
+    r = c.post("/api/plans", json={"goal": "读完 4 本书", "steps": [{"title": "选书", "detail": "", "substeps": []}],
+                                   "chats": {"k1": [{"role": "user", "content": "hi"}]}, "done": []})
+    assert r.status_code == 200 and r.json()["id"]
+    pid = r.json()["id"]
+
+    # 更新（同 id upsert，不新增）
+    r = c.post("/api/plans", json={"id": pid, "goal": "读完 4 本书", "steps": [{"title": "选书", "detail": "", "substeps": []}], "done": ["选书"]})
+    lst = c.get("/api/plans").json()["plans"]
+    assert len(lst) == 1 and lst[0]["done"] == 1 and lst[0]["chats"] == 1
+
+    # 归档 / 恢复
+    assert c.post(f"/api/plans/{pid}/status", json={"status": "archived"}).json()["ok"]
+    assert c.get("/api/plans").json()["plans"][0]["status"] == "archived"
+    assert c.post(f"/api/plans/{pid}/status", json={"status": "active"}).json()["ok"]
+
+    # 取回全文含 chats
+    full = c.get(f"/api/plans/{pid}").json()
+    assert full["chats"]["k1"][0]["content"] == "hi"
+
+    # 删除
+    assert c.delete(f"/api/plans/{pid}").json()["ok"]
+    assert c.get("/api/plans").json()["plans"] == []
+    assert c.get(f"/api/plans/{pid}").status_code == 404
+
+
+def test_plan_validation():
+    from fastapi.testclient import TestClient
+    import app as A
+    c = TestClient(A.app)
+    assert c.post("/api/plans", json={"goal": "", "steps": []}).status_code == 400
+    assert c.post("/api/plans/x/status", json={"status": "bogus"}).status_code == 400

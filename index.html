@@ -228,6 +228,40 @@
   .btn-apply:disabled{opacity:.6;cursor:not-allowed}
   .applybar .meta{font-size:var(--f-xs);color:var(--sub)}
   footer{text-align:center;margin-top:var(--s-8);color:var(--sub);font-size:var(--f-xs)}
+
+  /* ---- 历史记录面板 ---- */
+  .hbtn{margin-left:auto;border:1px solid var(--line-strong);background:var(--surface);color:var(--ink);
+    font-family:var(--hand);font-size:var(--f-sm);font-weight:700;border-radius:var(--r-full);
+    padding:var(--s-1) var(--s-3);cursor:pointer;display:inline-flex;align-items:center;gap:var(--s-1);
+    transition:all var(--dur) var(--ease)}
+  .hbtn:hover{border-color:var(--accent);color:var(--accent-deep);background:var(--accent-soft)}
+  .hbtn:active{transform:scale(.96)}
+  .mask{position:fixed;inset:0;background:rgba(60,53,42,.35);z-index:60;opacity:0;pointer-events:none;transition:opacity var(--dur) var(--ease)}
+  .mask.show{opacity:1;pointer-events:auto}
+  .modal{position:fixed;top:50%;left:50%;transform:translate(-50%,-46%) scale(.97);opacity:0;pointer-events:none;
+    width:520px;max-width:92vw;max-height:78vh;display:flex;flex-direction:column;
+    background:var(--paper);border:1px solid var(--line);border-radius:var(--r-3);box-shadow:var(--shadow-pop);
+    z-index:61;transition:all var(--dur) var(--ease)}
+  .modal.show{opacity:1;pointer-events:auto;transform:translate(-50%,-50%) scale(1)}
+  .mh{display:flex;align-items:center;gap:var(--s-2);padding:var(--s-4) var(--s-4) var(--s-2)}
+  .mh b{font-family:var(--hand);font-size:var(--f-h)}
+  .mh .x-btn{margin-left:auto}
+  .mlist{overflow-y:auto;padding:0 var(--s-4) var(--s-4);display:flex;flex-direction:column;gap:var(--s-2)}
+  .mrow{display:flex;align-items:center;gap:var(--s-2);padding:var(--s-2) var(--s-3);
+    background:var(--surface);border:1px solid var(--line);border-radius:var(--r-2)}
+  .mrow .g{flex:1;min-width:0}
+  .mrow .g .t{font-size:var(--f-body);font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .mrow .g .d{font-size:var(--f-xs);color:var(--sub);margin-top:2px}
+  .mrow .badge{flex:none;font-size:var(--f-xs);padding:2px var(--s-2);border-radius:var(--r-full);font-weight:600}
+  .mrow .badge.active{background:var(--green-soft);color:var(--green)}
+  .mrow .badge.archived{background:var(--surface-3);color:var(--sub)}
+  .mact{flex:none;display:flex;gap:var(--s-1)}
+  .mact button{border:1px solid var(--line-strong);background:transparent;color:var(--ink);font-size:var(--f-xs);
+    border-radius:var(--r-1);padding:3px var(--s-2);cursor:pointer;transition:all var(--dur) var(--ease);font-family:var(--body)}
+  .mact button:hover{border-color:var(--accent);color:var(--accent-deep);background:var(--accent-soft)}
+  .mact button:active{transform:scale(.95)}
+  .mact button.danger:hover{border-color:var(--red);color:var(--red);background:#f7e6e0}
+  .mempty{text-align:center;color:var(--sub);font-size:var(--f-sm);padding:var(--s-6) 0}
 </style>
 </head>
 <body>
@@ -237,6 +271,10 @@
       <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="m12 3-1.9 5.8a2 2 0 0 1-1.3 1.3L3 12l5.8 1.9a2 2 0 0 1 1.3 1.3L12 21l1.9-5.8a2 2 0 0 1 1.3-1.3L21 12l-5.8-1.9a2 2 0 0 1-1.3-1.3Z"/></svg>
     </div>
     <h1>步步伴 StepMate</h1>
+    <button class="hbtn" id="historyBtn" title="历史记录与归档">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/><path d="M12 7v5l4 2"/></svg>
+      历史记录
+    </button>
   </header>
   <p class="tag">把大目标拆成一步步，<b>每一步都有 AI 执行搭档陪你真的做出来</b>——不是只给建议。</p>
 
@@ -274,7 +312,7 @@
     <div id="err" class="err"></div>
     <div class="restore-tip" id="restoreTip" hidden>
       <span id="restoreText"></span>
-      <button id="discardBtn">丢弃，重新开始</button>
+      <button id="discardBtn">归档，重新开始</button>
     </div>
   </div>
 
@@ -313,6 +351,11 @@
     </button>
   </div>
 </div>
+<div class="mask" id="hmask"></div>
+<div class="modal" id="hmodal" role="dialog" aria-label="历史记录">
+  <div class="mh"><b>历史记录</b><button class="x-btn" id="closeHistory">关闭</button></div>
+  <div class="mlist" id="hlist"></div>
+</div>
 <div class="toast" id="toast"></div>
 
 <script>
@@ -320,6 +363,60 @@ const $ = s => document.querySelector(s);
 const esc = s => (s||'').replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));
 function toast(t){const el=$('#toast');el.textContent=t;el.classList.add('show');
   clearTimeout(el._t);el._t=setTimeout(()=>el.classList.remove('show'),2400);}
+
+// ================= 历史记录（列表 / 打开 / 归档 / 删除） =================
+function fmtTime(ts){ if(!ts)return''; const d=new Date(ts*1000);
+  return d.toLocaleDateString('zh-CN')+' '+d.toLocaleTimeString('zh-CN',{hour:'2-digit',minute:'2-digit'}); }
+async function renderHistory(){
+  const box=$('#hlist'); box.innerHTML='<div class="mempty">加载中…</div>';
+  let plans=[];
+  try{ plans=((await (await fetch('/api/plans')).json()).plans)||[]; }
+  catch(e){ box.innerHTML='<div class="mempty">服务端不可达，稍后再试</div>'; return; }
+  if(!plans.length){ box.innerHTML='<div class="mempty">还没有历史计划。拆一个目标，它会自动存到这里。</div>'; return; }
+  box.innerHTML='';
+  plans.forEach(p=>{
+    const row=document.createElement('div'); row.className='mrow';
+    row.innerHTML=`<div class="g"><div class="t">${esc(p.goal)}</div>
+      <div class="d">${fmtTime(p.updatedAt)} · 完成 ${p.done}/${p.steps} 步${p.chats?' · 含对话':''}</div></div>
+      <span class="badge ${p.status}">${p.status==='active'?'进行中':'已归档'}</span>
+      <div class="mact">
+        <button data-act="open">打开</button>
+        <button data-act="arc">${p.status==='active'?'归档':'恢复'}</button>
+        <button data-act="del" class="danger">删除</button>
+      </div>`;
+    row.addEventListener('click',async e=>{
+      const act=e.target.dataset&&e.target.dataset.act; if(!act)return;
+      if(act==='open'){
+        try{
+          const full=await (await fetch('/api/plans/'+p.id)).json();
+          curPlanId=p.id; goalText=full.goal; stepsData=full.steps||[]; chats=full.chats||{};
+          doneSet.clear(); (full.done||[]).forEach(t=>doneSet.add(t));
+          localStorage.setItem('sm_done_v1',JSON.stringify([...doneSet]));
+          renderTree(); $('#goal').value=goalText;
+          $('#hmodal').classList.remove('show'); $('#hmask').classList.remove('show');
+          toast('已打开：'+full.goal);
+        }catch(err){ toast('⚠️ 打开失败'); }
+      }else if(act==='arc'){
+        const st=p.status==='active'?'archived':'active';
+        try{ await fetch('/api/plans/'+p.id+'/status',{method:'POST',
+          headers:{'Content-Type':'application/json'},body:JSON.stringify({status:st})});
+          renderHistory(); toast(st==='archived'?'已归档':'已恢复为进行中');
+        }catch(err){ toast('⚠️ 操作失败'); }
+      }else if(act==='del'){
+        if(!confirm('删除「'+p.goal+'」？删除后无法恢复。'))return;
+        try{ await fetch('/api/plans/'+p.id,{method:'DELETE'});
+          if(p.id===curPlanId){ curPlanId=null; chats={}; clearPlan(); }
+          renderHistory(); toast('已删除');
+        }catch(err){ toast('⚠️ 删除失败'); }
+      }
+    });
+    box.appendChild(row);
+  });
+}
+$('#historyBtn').addEventListener('click',()=>{renderHistory();
+  $('#hmodal').classList.add('show');$('#hmask').classList.add('show');});
+$('#closeHistory').addEventListener('click',()=>{$('#hmodal').classList.remove('show');$('#hmask').classList.remove('show');});
+$('#hmask').addEventListener('click',()=>{$('#hmodal').classList.remove('show');$('#hmask').classList.remove('show');});
 
 // ================= Provider 设置 =================
 const PRESETS = {
@@ -380,12 +477,26 @@ fetch('/api/presets').then(r=>r.json()).then(loc=>{
 const LEVEL_NAMES = {1:'随便拆拆',2:'大致方向',3:'适中',4:'比较细',5:'精确到天'};
 $('#level').addEventListener('input', e=>$('#levelName').textContent = LEVEL_NAMES[e.target.value]);
 
-// ================= 持久化 =================
+// ================= 持久化（服务端为主，localStorage 仅作缓存） =================
 let goalText='', stepsData=[], curStep=null, curDetail='', curStepKey='', curMode='exec', curRef=null;
+let chats={};          // stepKey -> [{role, content}]
+let curPlanId=null;    // 服务端计划 id
 const PLAN_KEY='sm_plan_v2';
 const chatKey = k => 'sm_chat_' + btoa(unescape(encodeURIComponent(k))).replace(/=/g,'');
+function localCache(){
+  try{ localStorage.setItem(PLAN_KEY, JSON.stringify({id:curPlanId, goal:goalText, steps:stepsData, chats:chats, savedAt:Date.now()})); }catch(e){}
+}
+function planDoc(){
+  return {id:curPlanId, goal:goalText, steps:stepsData, chats:chats,
+          done:[...doneSet], status:'active'};
+}
 function savePlan(){
-  localStorage.setItem(PLAN_KEY, JSON.stringify({goal:goalText, steps:stepsData, savedAt:Date.now()}));
+  localCache();
+  if(!stepsData.length) return;
+  fetch('/api/plans',{method:'POST',headers:{'Content-Type':'application/json'},
+    body:JSON.stringify(planDoc())})
+    .then(r=>r.json()).then(d=>{ if(d.id){curPlanId=d.id; localCache();} })
+    .catch(()=>{});
 }
 function loadPlan(){
   try{ return JSON.parse(localStorage.getItem(PLAN_KEY)); }catch(e){ return null; }
@@ -480,7 +591,10 @@ const ICONS = {
   down:'<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.05" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>',
 };
 const doneSet = new Set(JSON.parse(localStorage.getItem('sm_done_v1')||'[]'));
-const saveDone = () => localStorage.setItem('sm_done_v1', JSON.stringify([...doneSet]));
+const saveDone = () => {
+  localStorage.setItem('sm_done_v1', JSON.stringify([...doneSet]));
+  if(stepsData.length) savePlan();   // 完成状态进服务端计划文档
+};
 
 function renderTree(){
   $('#tree').hidden = stepsData.length===0;
@@ -604,7 +718,7 @@ function openChat(title,detail,key,mode='exec',ref=null){
   $('#dhTitle').textContent=(mode==='discuss'?'讨论这一步：':'和 AI 一起做：')+title;
   $('#applybar').hidden = mode!=='discuss';
   const msgs=$('#msgs'); msgs.innerHTML='';
-  const saved=JSON.parse(localStorage.getItem(chatKey(curStepKey))||'[]');
+  const saved=chats[curStepKey]||[];
   if(saved.length===0){
     addMsg('a', mode==='discuss'
       ? `关于这一步「${title}」，哪里拿不准、想改、想质疑，直接说。\n比如：预算定多少、顺序对不对、要不要拆开、验收标准是什么。聊清楚后点下方「✓ 按讨论更新此步」。`
@@ -617,14 +731,14 @@ function openChat(title,detail,key,mode='exec',ref=null){
   $('#drawer').classList.add('show');
 }
 function getHistory(){
-  return JSON.parse(localStorage.getItem(chatKey(curStepKey))||'[]').slice(-12);
+  return (chats[curStepKey]||[]).slice(-12);
 }
 async function sendMsg(){
   const txt=$('#cm').value.trim(); if(!txt)return;
   $('#cm').value='';
   addMsg('u',esc(txt));
   const hist=getHistory(); hist.push({role:'user',content:txt});
-  localStorage.setItem(chatKey(curStepKey),JSON.stringify(hist));
+  chats[curStepKey]=hist; savePlan();
   const bubble=addMsg('a','<span class="spin"></span>');
   bubble.classList.add('streaming');
   await streamWithRetry(txt,bubble);
@@ -666,7 +780,7 @@ async function streamOnce(txt,bubble){
   bubble.innerHTML=mdRender(text);
   if(actions.length) attachActions(bubble,actions);
   const hist2=getHistory(); hist2.push({role:'assistant',content:text});
-  localStorage.setItem(chatKey(curStepKey),JSON.stringify(hist2));
+  chats[curStepKey]=hist2; savePlan();
 }
 function parseActions(full){
   const actions=[]; let m;
@@ -735,7 +849,7 @@ async function applyDiscuss(){
   if(curMode!=='discuss'||!curRef)return;
   const btn=$('#applyDiscuss'); btn.disabled=true; const old=btn.textContent; btn.textContent='更新中…';
   try{
-    const hist=JSON.parse(localStorage.getItem(chatKey(curStepKey))||'[]');
+    const hist=(chats[curStepKey]||[]);
     if(hist.length===0){ toast('先和 AI 讨论几句再更新'); btn.disabled=false; btn.textContent=old; return; }
     const r=await fetch('/api/refine',{method:'POST',headers:{'Content-Type':'application/json'},
       body:JSON.stringify({step:curStep,history:hist,provider:currentProvider()})});
@@ -806,21 +920,34 @@ $('#dlMd').addEventListener('click',()=>{
   toast('已导出 '+name);
 });
 
-// ================= 恢复上次进度 =================
-(function restore(){
-  const p=loadPlan();
+// ================= 恢复上次进度（服务端优先，本地缓存兜底） =================
+async function restoreLatest(){
+  let p=null;
+  try{
+    const lst=await (await fetch('/api/plans')).json();
+    const act=(lst.plans||[]).find(x=>x.status==='active');
+    if(act) p=await (await fetch('/api/plans/'+act.id)).json();
+  }catch(e){ /* 服务端不可达，走缓存 */ }
+  if(!p||!p.steps||!p.steps.length){ const c=loadPlan(); if(c&&c.steps&&c.steps.length) p={...c}; }
   if(!p||!p.steps||!p.steps.length)return;
-  goalText=p.goal; stepsData=p.steps;
-  renderTree();
-  $('#goal').value=p.goal;
-  const t=new Date(p.savedAt);
+  curPlanId=p.id||null;
+  goalText=p.goal; stepsData=p.steps; chats=p.chats||{};
+  (p.done||[]).forEach(t=>doneSet.add(t));
+  localStorage.setItem('sm_done_v1',JSON.stringify([...doneSet]));
+  renderTree(); $('#goal').value=p.goal;
+  const t=new Date((p.updatedAt||p.savedAt||0)*1000||Date.now());
   $('#restoreText').textContent=`已恢复上次进度：「${p.goal}」（${t.toLocaleString('zh-CN')}）`;
   $('#restoreTip').hidden=false;
-  $('#discardBtn').addEventListener('click',()=>{
-    clearPlan(); stepsData=[]; goalText=''; doneSet.clear(); saveDone();
-    $('#tree').hidden=true;$('#progress').hidden=true;$('#restoreTip').hidden=true;$('#goal').value='';
-  });
-})();
+}
+restoreLatest();
+$('#discardBtn').addEventListener('click',async()=>{
+  if(curPlanId){ try{ await fetch('/api/plans/'+curPlanId+'/status',{method:'POST',
+    headers:{'Content-Type':'application/json'},body:JSON.stringify({status:'archived'})}); }catch(e){} }
+  curPlanId=null; chats={};
+  clearPlan(); stepsData=[]; goalText=''; doneSet.clear(); saveDone();
+  $('#tree').hidden=true;$('#progress').hidden=true;$('#restoreTip').hidden=true;$('#goal').value='';
+  toast('已归档到「历史记录」，可在那里找回');
+});
 
 // ================= 语音输入 =================
 const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
